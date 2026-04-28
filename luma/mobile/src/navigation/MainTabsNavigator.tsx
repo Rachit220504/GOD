@@ -4,6 +4,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { MainTabParamList, HomeStackParamList } from '../types';
 import { Colors, FontSize, Spacing, Shadow } from '../constants/theme';
+import { TAB_BAR_HEIGHT } from '../utils/responsive';
 
 // Screens
 import { HomeScreen } from '../screens/home/HomeScreen';
@@ -54,6 +55,18 @@ function HomeStackNavigator() {
   );
 }
 
+// Standalone stack so ReadingModeScreen (typed for NativeStack) can be used
+// as a tab without prop-type conflicts.
+const ReadingStack = createNativeStackNavigator<HomeStackParamList>();
+
+function ReadingStackNavigator() {
+  return (
+    <ReadingStack.Navigator screenOptions={{ headerShown: false }}>
+      <ReadingStack.Screen name="ReadingMode" component={ReadingModeScreen} />
+    </ReadingStack.Navigator>
+  );
+}
+
 // ─── Main Tabs ────────────────────────────────────────────────────────────────
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -89,7 +102,7 @@ export function MainTabsNavigator() {
       />
       <Tab.Screen
         name="Reading"
-        component={ReadingModeScreen}
+        component={ReadingStackNavigator}
         options={{
           tabBarButton: (props) => (
             <TouchableOpacity
@@ -155,7 +168,7 @@ const styles = StyleSheet.create({
   tabBar: {
     backgroundColor: Colors.white,
     borderTopWidth: 0,
-    height: 72,
+    height: TAB_BAR_HEIGHT,
     paddingBottom: 8,
     ...Shadow.md,
   },

@@ -12,6 +12,9 @@ import { Colors } from '../constants/theme';
 const Root = createNativeStackNavigator<RootStackParamList>();
 
 export function RootNavigator() {
+  // 1. Pull the authentication state directly from your context
+  const { isLoading, isAuthenticated, hasCompletedOnboarding } = useAuth();
+
   return (
     <NavigationContainer>
       <Root.Navigator
@@ -21,10 +24,20 @@ export function RootNavigator() {
           animation: 'fade',
         }}
       >
-        <Root.Screen name="Splash" component={SplashScreen} />
-        <Root.Screen name="Auth" component={AuthNavigator} />
-        <Root.Screen name="Onboarding" component={OnboardingNavigator} />
-        <Root.Screen name="Main" component={MainTabsNavigator} />
+        {/* 2. Conditionally render the correct stack based on state */}
+        {isLoading ? (
+          // Show splash screen while checking secure storage for tokens
+          <Root.Screen name="Splash" component={SplashScreen} />
+        ) : !isAuthenticated ? (
+          // No user? Force them into the Auth flow
+          <Root.Screen name="Auth" component={AuthNavigator} />
+        ) : !hasCompletedOnboarding ? (
+          // Authenticated but needs to complete setup? Show Onboarding
+          <Root.Screen name="Onboarding" component={OnboardingNavigator} />
+        ) : (
+          // Fully authenticated and onboarded? Show the Main app
+          <Root.Screen name="Main" component={MainTabsNavigator} />
+        )}
       </Root.Navigator>
     </NavigationContainer>
   );

@@ -16,6 +16,7 @@ import { FloatingActionButton } from '../../components/reading/FloatingActionBut
 import { useReadingComfort } from '../../contexts/ReadingComfortContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { contentApi, progressApi } from '../../services/api';
+import { isTablet, centeredContent, SCREEN_PADDING } from '../../utils/responsive';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'ReadingMode'>;
 
@@ -399,7 +400,11 @@ export function ReadingModeScreen({ route, navigation }: Props) {
       {/* ── Reading area ── */}
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={[styles.readingArea, { paddingBottom: 140 }]}
+        contentContainerStyle={[
+          styles.readingArea,
+          { paddingBottom: 140 },
+          isTablet && centeredContent,
+        ]}
         showsVerticalScrollIndicator={false}
         scrollEventThrottle={16}
         removeClippedSubviews={true}
@@ -479,7 +484,7 @@ const styles = StyleSheet.create({
   progressPct: { fontSize: FontSize.sm, fontWeight: '800', color: Colors.purple },
   progressTrack: { height: 4, backgroundColor: Colors.border },
   progressFill: { height: 4, backgroundColor: Colors.purple, borderRadius: 2 },
-  readingArea: { paddingHorizontal: Spacing.xl, paddingTop: Spacing.xl },
+  readingArea: { paddingHorizontal: SCREEN_PADDING, paddingTop: Spacing.xl },
   paragraph: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: Spacing.xl },
   word: { color: Colors.textPrimary },
   wordHighlighted: {

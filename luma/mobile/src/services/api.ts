@@ -160,8 +160,15 @@ export const authApi = {
   },
 
   async logout(): Promise<void> {
-    await api.post('/auth/logout');
-    await TokenStorage.clear();
+    try {
+      await api.post('/auth/logout');
+    } catch (error) {
+      // Ignore server errors during logout (like the 401 you are seeing)
+      console.log('Server logout rejected, clearing local tokens anyway');
+    } finally {
+      // ALWAYS clear local tokens so the user isn't stuck
+      await TokenStorage.clear();
+    }
   },
 };
 

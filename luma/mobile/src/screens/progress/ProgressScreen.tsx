@@ -7,6 +7,7 @@ import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { progressApi } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { ProgressStats, WeeklyActivity } from '../../types';
+import { isTablet, SCREEN_PADDING, centeredContent } from '../../utils/responsive';
 
 function WeeklyChart({ data }: { data: WeeklyActivity[] }) {
   const max = Math.max(...data.map((d) => d.minutes), 1);
@@ -77,7 +78,10 @@ export function ProgressScreen() {
 
   return (
     <SafeScreen scrollable withPadding={false}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.content}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[s.content, isTablet && centeredContent]}
+      >
         <View style={s.header}>
           <Text style={s.title}>Your Progress 📊</Text>
           <Text style={s.subtitle}>Keep reading to earn more points!</Text>
@@ -85,8 +89,20 @@ export function ProgressScreen() {
 
         {stats ? (
           <>
-            <View style={s.row}><StatCard emoji="🔥" value={String(stats.currentStreak)} label="Day Streak" color={Colors.softPeach} /><StatCard emoji="⭐" value={String(stats.totalPoints)} label="Points" color={Colors.lavender} /></View>
-            <View style={s.row}><StatCard emoji="📚" value={String(stats.booksCompleted)} label="Books Done" color={Colors.successLight} /><StatCard emoji="⏱" value={fmt(stats.totalReadingSeconds)} label="Reading Time" color={Colors.softBlue} /></View>
+            {/* Stats: 2×2 on phone, single 4-col row on tablet */}
+            {isTablet ? (
+              <View style={s.rowTablet}>
+                <StatCard emoji="🔥" value={String(stats.currentStreak)} label="Day Streak" color={Colors.softPeach} />
+                <StatCard emoji="⭐" value={String(stats.totalPoints)} label="Points" color={Colors.lavender} />
+                <StatCard emoji="📚" value={String(stats.booksCompleted)} label="Books Done" color={Colors.successLight} />
+                <StatCard emoji="⏱" value={fmt(stats.totalReadingSeconds)} label="Reading Time" color={Colors.softBlue} />
+              </View>
+            ) : (
+              <>
+                <View style={s.row}><StatCard emoji="🔥" value={String(stats.currentStreak)} label="Day Streak" color={Colors.softPeach} /><StatCard emoji="⭐" value={String(stats.totalPoints)} label="Points" color={Colors.lavender} /></View>
+                <View style={s.row}><StatCard emoji="📚" value={String(stats.booksCompleted)} label="Books Done" color={Colors.successLight} /><StatCard emoji="⏱" value={fmt(stats.totalReadingSeconds)} label="Reading Time" color={Colors.softBlue} /></View>
+              </>
+            )}
 
             <Card variant="elevated" style={s.card}>
               <Text style={s.cardTitle}>📈 Your Averages</Text>
@@ -150,11 +166,12 @@ export function ProgressScreen() {
 }
 
 const s = StyleSheet.create({
-  content: { paddingHorizontal: Spacing.screen, paddingBottom: Spacing.xxxl },
+  content: { paddingHorizontal: SCREEN_PADDING, paddingBottom: Spacing.xxxl },
   header: { paddingTop: Spacing.xl, paddingBottom: Spacing.xl, gap: Spacing.xs },
   title: { fontSize: FontSize.xxxl, fontWeight: '800', color: Colors.textPrimary, letterSpacing: -0.5 },
   subtitle: { fontSize: FontSize.md, color: Colors.textSecondary },
   row: { flexDirection: 'row', gap: Spacing.md, marginBottom: Spacing.md },
+  rowTablet: { flexDirection: 'row', gap: Spacing.md, marginBottom: Spacing.md },
   statCard: { flex: 1, borderRadius: BorderRadius.xl, padding: Spacing.lg, alignItems: 'center', gap: Spacing.xs, ...Shadow.sm },
   statEmoji: { fontSize: 28 },
   statValue: { fontSize: FontSize.xxl, fontWeight: '800', color: Colors.textPrimary },

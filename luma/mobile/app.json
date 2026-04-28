@@ -32,13 +32,7 @@
     },
     "plugins": [
       "expo-font",
-      "expo-secure-store",
-      [
-        "expo-av",
-        {
-          "microphonePermission": false
-        }
-      ]
+      "expo-secure-store"
     ]
   }
 }

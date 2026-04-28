@@ -6,7 +6,7 @@ import {
   Animated,
   TouchableOpacity,
 } from 'react-native';
-import { Audio } from 'expo-av';
+import { useAudioPlayer } from 'expo-audio';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { OnboardingStackParamList } from '../../types';
 import { Colors, FontSize, Spacing, BorderRadius, Shadow } from '../../constants/theme';
@@ -19,9 +19,11 @@ type AudioStatus = 'idle' | 'playing' | 'success' | 'error';
 
 export function AudioCheckScreen({ navigation }: Props) {
   const [status, setStatus] = useState<AudioStatus>('idle');
-  const [sound, setSound] = useState<Audio.Sound | null>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  // The new expo-audio hook automatically handles loading and cleanup!
+  const player = useAudioPlayer('https://www.soundjay.com/buttons/sounds/button-1.mp3');
 
   useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -29,16 +31,10 @@ export function AudioCheckScreen({ navigation }: Props) {
       duration: 500,
       useNativeDriver: true,
     }).start();
-
-    return () => {
-      // Cleanup sound on unmount
-      sound?.unloadAsync().catch(() => null);
-    };
   }, []);
 
   useEffect(() => {
     if (status === 'playing') {
-      // Pulse animation while playing
       const pulse = Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnim, {
@@ -60,39 +56,19 @@ export function AudioCheckScreen({ navigation }: Props) {
     }
   }, [status]);
 
-  const playTestSound = async () => {
+  const playTestSound = () => {
     try {
       setStatus('playing');
 
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: false,
-        playsInSilentModeIOS: true,
-        staysActiveInBackground: false,
-      });
+      // Play the loaded sound
+      player.play();
 
-      // Unload any previous sound
-      if (sound) {
-        await sound.unloadAsync();
-      }
+      // The test beep is short, so we transition to success shortly after it starts
+      setTimeout(() => {
+        setStatus('success');
+      }, 1200);
 
-      // Use a simple system sound or a bundled asset tone
-      // We generate a beep using the Expo audio API via URI
-      const { sound: newSound } = await Audio.Sound.createAsync(
-        // Built-in notification sound available on all Expo devices
-        { uri: 'https://www.soundjay.com/buttons/sounds/button-1.mp3' },
-        { shouldPlay: true, volume: 1.0 },
-      );
-
-      setSound(newSound);
-
-      newSound.setOnPlaybackStatusUpdate((s) => {
-        if (s.isLoaded && s.didJustFinish) {
-          setStatus('success');
-          newSound.unloadAsync().catch(() => null);
-        }
-      });
     } catch {
-      // Gracefully degrade — don't block onboarding for audio issues
       setStatus('error');
     }
   };
@@ -132,7 +108,6 @@ export function AudioCheckScreen({ navigation }: Props) {
   return (
     <SafeScreen backgroundColor={Colors.cream}>
       <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
-        {/* Icon */}
         <Animated.View
           style={[
             styles.speakerCircle,
@@ -143,11 +118,9 @@ export function AudioCheckScreen({ navigation }: Props) {
           <Text style={styles.speakerEmoji}>{speakerEmoji}</Text>
         </Animated.View>
 
-        {/* Text */}
         <Text style={styles.title}>{config.title}</Text>
         <Text style={styles.subtitle}>{config.subtitle}</Text>
 
-        {/* Action buttons */}
         <View style={styles.actions}>
           {status === 'success' ? (
             <Button
@@ -189,7 +162,6 @@ export function AudioCheckScreen({ navigation }: Props) {
           )}
         </View>
 
-        {/* Skip option */}
         {status === 'idle' && (
           <TouchableOpacity
             onPress={() => navigation.navigate('OnboardingSuccess')}

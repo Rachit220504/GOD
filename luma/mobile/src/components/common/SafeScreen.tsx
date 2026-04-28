@@ -1,6 +1,5 @@
 import React, { ReactNode } from 'react';
 import {
-  SafeAreaView,
   ScrollView,
   View,
   StyleSheet,
@@ -9,8 +8,10 @@ import {
   Platform,
   StatusBar,
 } from 'react-native';
+// Use the new safe-area-context to fix the warning
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useReadingComfort } from '../../contexts/ReadingComfortContext';
-import { Spacing } from '../../constants/theme';
+import { SCREEN_PADDING } from '../../utils/responsive';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -64,7 +65,8 @@ export function SafeScreen({
   const content = withKeyboard ? (
     <KeyboardAvoidingView
       style={[styles.flex, { backgroundColor: bg }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      // FIX: Use undefined for Android so it doesn't fight the native keyboard
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
     >
       {inner}
@@ -96,6 +98,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   padded: {
-    padding: Spacing.screen,
+    padding: SCREEN_PADDING,
   },
 });

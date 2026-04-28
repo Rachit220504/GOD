@@ -8,9 +8,9 @@ import {
   StatusBar,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../types';
-import { Colors, FontSize, Spacing } from '../../constants/theme';
-import { useAuth } from '../../contexts/AuthContext';
+import { RootStackParamList } from '../types';
+import { Colors, FontSize, Spacing } from '../constants/theme';
+import { useAuth } from '../contexts/AuthContext';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Splash'>;
 

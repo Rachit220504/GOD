@@ -41,7 +41,21 @@ export const syllabifyValidators = [
 ];
 
 export const contentIdParamValidator = [
-  param('id').isUUID().withMessage('Content id must be a valid UUID'),
+  param('id')
+    .isString()
+    .trim()
+    .notEmpty()
+    .withMessage('Content id is required')
+    .custom((value) => {
+      // Allow either a standard UUID or your specific seed ID format
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+      const isSeed = value.startsWith('seed-story-');
+
+      if (!isUUID && !isSeed) {
+        throw new Error('Content id must be a valid UUID');
+      }
+      return true;
+    }),
 ];
 
 export const listContentValidators = [

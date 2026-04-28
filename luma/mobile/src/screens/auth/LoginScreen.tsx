@@ -15,6 +15,7 @@ import { SafeScreen } from '../../components/common/SafeScreen';
 import { Button } from '../../components/ui/Button';
 import { InputField } from '../../components/ui/InputField';
 import { useAuth } from '../../contexts/AuthContext';
+import { isTablet, FORM_MAX_WIDTH } from '../../utils/responsive';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
@@ -69,98 +70,110 @@ export function LoginScreen({ navigation }: Props) {
 
   return (
     <SafeScreen scrollable withKeyboard backgroundColor={Colors.cream}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.logoMini}>
-          <Text style={styles.logoEmoji}>🌟</Text>
+      {/* On tablet: centre & cap width so the form doesn't stretch edge-to-edge */}
+      <View style={[styles.container, isTablet && styles.containerTablet]}>
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.logoMini}>
+            <Text style={styles.logoEmoji}>🌟</Text>
+          </View>
+          <Text style={styles.title}>Welcome back!</Text>
+          <Text style={styles.subtitle}>Sign in to continue reading</Text>
         </View>
-        <Text style={styles.title}>Welcome back!</Text>
-        <Text style={styles.subtitle}>Sign in to continue reading</Text>
-      </View>
 
-      {/* Form */}
-      <Animated.View
-        style={[styles.form, { transform: [{ translateX: shakeAnim }] }]}
-      >
-        <InputField
-          label="Email address"
-          value={email}
-          onChangeText={setEmail}
-          error={errors.email}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          autoComplete="email"
-          returnKeyType="next"
-          required
-        />
+        {/* Form */}
+        <Animated.View
+          style={[styles.form, { transform: [{ translateX: shakeAnim }] }]}
+        >
+          <InputField
+            label="Email address"
+            value={email}
+            onChangeText={setEmail}
+            error={errors.email}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoComplete="email"
+            returnKeyType="next"
+            required
+          />
 
-        <InputField
-          label="Password"
-          value={password}
-          onChangeText={setPassword}
-          error={errors.password}
-          secureTextEntry={!showPassword}
-          autoComplete="password"
-          returnKeyType="done"
-          onSubmitEditing={handleLogin}
-          required
-          rightIcon={
-            <Text style={styles.showHide}>
-              {showPassword ? 'Hide' : 'Show'}
-            </Text>
-          }
-          onRightIconPress={() => setShowPassword((p) => !p)}
-        />
+          <InputField
+            label="Password"
+            value={password}
+            onChangeText={setPassword}
+            error={errors.password}
+            secureTextEntry={!showPassword}
+            autoComplete="password"
+            returnKeyType="done"
+            onSubmitEditing={handleLogin}
+            required
+            rightIcon={
+              <Text style={styles.showHide}>
+                {showPassword ? 'Hide' : 'Show'}
+              </Text>
+            }
+            onRightIconPress={() => setShowPassword((p) => !p)}
+          />
 
-        <Button
-          label="Sign In"
-          onPress={handleLogin}
-          isLoading={isLoading}
-          fullWidth
-          size="lg"
-          style={styles.loginBtn}
-        />
-      </Animated.View>
+          <Button
+            label="Sign In"
+            onPress={handleLogin}
+            isLoading={isLoading}
+            fullWidth
+            size="lg"
+            style={styles.loginBtn}
+          />
+        </Animated.View>
 
-      {/* Divider */}
-      <View style={styles.divider}>
-        <View style={styles.dividerLine} />
-        <Text style={styles.dividerText}>or</Text>
-        <View style={styles.dividerLine} />
-      </View>
+        {/* Divider */}
+        <View style={styles.divider}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>or</Text>
+          <View style={styles.dividerLine} />
+        </View>
 
-      {/* Demo accounts */}
-      <View style={styles.demoSection}>
-        <Text style={styles.demoTitle}>Try a demo account</Text>
-        {[
-          { label: '👧 Child (Aarav)', email: 'aarav@luma.app', password: 'Child@123' },
-          { label: '👩 Parent', email: 'parent@luma.app', password: 'Parent@123' },
-        ].map((demo) => (
-          <TouchableOpacity
-            key={demo.email}
-            style={styles.demoBtn}
-            onPress={() => {
-              setEmail(demo.email);
-              setPassword(demo.password);
-            }}
-          >
-            <Text style={styles.demoBtnText}>{demo.label}</Text>
+        {/* Demo accounts */}
+        <View style={styles.demoSection}>
+          <Text style={styles.demoTitle}>Try a demo account</Text>
+          {[
+            { label: '👧 Child (Aarav)', email: 'aarav@luma.app', password: 'Child@123' },
+            { label: '👩 Parent', email: 'parent@luma.app', password: 'Parent@123' },
+          ].map((demo) => (
+            <TouchableOpacity
+              key={demo.email}
+              style={styles.demoBtn}
+              onPress={() => {
+                setEmail(demo.email);
+                setPassword(demo.password);
+              }}
+            >
+              <Text style={styles.demoBtnText}>{demo.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Footer */}
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>Don't have an account? </Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+            <Text style={styles.footerLink}>Sign up</Text>
           </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* Footer */}
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>Don't have an account? </Text>
-        <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-          <Text style={styles.footerLink}>Sign up</Text>
-        </TouchableOpacity>
+        </View>
       </View>
     </SafeScreen>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  containerTablet: {
+    maxWidth: FORM_MAX_WIDTH,
+    width: '100%',
+    alignSelf: 'center',
+    paddingVertical: Spacing.xl,
+  },
   header: {
     alignItems: 'center',
     paddingTop: Spacing.xxl,

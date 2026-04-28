@@ -10,6 +10,7 @@ import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { contentApi } from '../../services/api';
+import { isTablet, centeredContent, SCREEN_PADDING } from '../../utils/responsive';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'StoryDetail'>;
 
@@ -56,62 +57,65 @@ export function StoryDetailScreen({ route, navigation }: Props) {
         <Text style={styles.backText}>← Back</Text>
       </TouchableOpacity>
 
-      {/* Hero */}
-      <View style={[styles.hero, { backgroundColor: LEVEL_BG[story.readingLevel] ?? Colors.softBlue }]}>
-        <Text style={styles.heroEmoji}>📖</Text>
-        <Text style={styles.heroTitle}>{story.title}</Text>
-        <View style={styles.heroMeta}>
-          <Text style={styles.heroBadge}>{story.readingLevel}</Text>
-          <Text style={styles.heroBadge}>⏱ {story.estimatedMins} min</Text>
-          <Text style={styles.heroBadge}>📝 {story.wordCount} words</Text>
+      {/* On tablet: cap and centre all content */}
+      <View style={isTablet ? [styles.tabletWrapper, centeredContent] : undefined}>
+        {/* Hero */}
+        <View style={[styles.hero, { backgroundColor: LEVEL_BG[story.readingLevel] ?? Colors.softBlue }]}>
+          <Text style={styles.heroEmoji}>📖</Text>
+          <Text style={styles.heroTitle}>{story.title}</Text>
+          <View style={styles.heroMeta}>
+            <Text style={styles.heroBadge}>{story.readingLevel}</Text>
+            <Text style={styles.heroBadge}>⏱ {story.estimatedMins} min</Text>
+            <Text style={styles.heroBadge}>📝 {story.wordCount} words</Text>
+          </View>
+          {story.tags.length > 0 && (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <View style={styles.tagsRow}>
+                {story.tags.map((t) => (
+                  <View key={t} style={styles.tag}>
+                    <Text style={styles.tagText}>{t}</Text>
+                  </View>
+                ))}
+              </View>
+            </ScrollView>
+          )}
         </View>
-        {story.tags.length > 0 && (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={styles.tagsRow}>
-              {story.tags.map((t) => (
-                <View key={t} style={styles.tag}>
-                  <Text style={styles.tagText}>{t}</Text>
-                </View>
-              ))}
-            </View>
-          </ScrollView>
-        )}
-      </View>
 
-      <View style={styles.content}>
-        {/* Story preview */}
-        <Card variant="elevated" style={styles.previewCard}>
-          <Text style={styles.previewLabel}>Story Preview</Text>
-          <Text style={styles.previewText} numberOfLines={5}>
-            {story.body}
-          </Text>
-        </Card>
+        <View style={styles.content}>
+          {/* Story preview */}
+          <Card variant="elevated" style={styles.previewCard}>
+            <Text style={styles.previewLabel}>Story Preview</Text>
+            <Text style={styles.previewText} numberOfLines={5}>
+              {story.body}
+            </Text>
+          </Card>
 
-        {/* Word count info */}
-        <Card variant="flat" style={styles.infoCard}>
-          <Text style={styles.infoTitle}>📚 What you'll practise</Text>
-          <Text style={styles.infoText}>
-            This story has {story.syllableMap.length} highlighted words with syllable
-            breakdowns to help you read them step by step.
-          </Text>
-        </Card>
+          {/* Word count info */}
+          <Card variant="flat" style={styles.infoCard}>
+            <Text style={styles.infoTitle}>📚 What you'll practise</Text>
+            <Text style={styles.infoText}>
+              This story has {story.syllableMap.length} highlighted words with syllable
+              breakdowns to help you read them step by step.
+            </Text>
+          </Card>
 
-        {/* CTA */}
-        <Button
-          label="Start Reading! 🚀"
-          onPress={() => navigation.navigate('ReadingMode', { storyId: story.id })}
-          fullWidth
-          size="lg"
-          style={styles.readBtn}
-        />
+          {/* CTA */}
+          <Button
+            label="Start Reading! 🚀"
+            onPress={() => navigation.navigate('ReadingMode', { storyId: story.id })}
+            fullWidth
+            size="lg"
+            style={styles.readBtn}
+          />
 
-        <Button
-          label="Back to Library"
-          onPress={() => navigation.goBack()}
-          variant="ghost"
-          fullWidth
-          size="md"
-        />
+          <Button
+            label="Back to Library"
+            onPress={() => navigation.goBack()}
+            variant="ghost"
+            fullWidth
+            size="md"
+          />
+        </View>
       </View>
     </SafeScreen>
   );
@@ -119,10 +123,14 @@ export function StoryDetailScreen({ route, navigation }: Props) {
 
 const styles = StyleSheet.create({
   backBtn: {
-    paddingHorizontal: Spacing.screen,
+    paddingHorizontal: SCREEN_PADDING,
     paddingVertical: Spacing.md,
   },
   backText: { fontSize: FontSize.md, color: Colors.purple, fontWeight: '600' },
+  tabletWrapper: {
+    overflow: 'hidden',
+    borderRadius: 0,
+  },
   hero: {
     padding: Spacing.xl,
     paddingBottom: Spacing.xxl,

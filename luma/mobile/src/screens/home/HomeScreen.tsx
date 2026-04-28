@@ -16,6 +16,9 @@ import { Card } from '../../components/ui/Card';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { contentApi } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
+import {
+  isTablet, SCREEN_PADDING, CONTENT_MAX_WIDTH, STORY_COLUMNS,
+} from '../../utils/responsive';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'HomeScreen'>;
 
@@ -168,112 +171,124 @@ export function HomeScreen({ navigation }: Props) {
 
   return (
     <SafeScreen withPadding={false}>
-      <FlatList
-        data={stories}
-        keyExtractor={(item) => item.id}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.listContent}
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefreshing}
-            onRefresh={onRefresh}
-            tintColor={Colors.purple}
-          />
-        }
-        ListHeaderComponent={
-          <View style={styles.header}>
-            {/* Greeting */}
-            <View style={styles.greetingRow}>
-              <View>
-                <Text style={styles.greeting}>
-                  {timeOfDayGreeting()}, {user?.displayName ?? 'Reader'}! 👋
-                </Text>
-                <Text style={styles.greetingSubtitle}>What would you like to read today?</Text>
+      {/* On tablets, cap list width and centre it */}
+      <View style={isTablet
+        ? { flex: 1, maxWidth: CONTENT_MAX_WIDTH, width: '100%', alignSelf: 'center' }
+        : { flex: 1 }}
+      >
+        <FlatList
+          key={String(STORY_COLUMNS)}
+          data={stories}
+          keyExtractor={(item) => item.id}
+          showsVerticalScrollIndicator={false}
+          numColumns={STORY_COLUMNS}
+          columnWrapperStyle={isTablet ? styles.columnWrapper : undefined}
+          contentContainerStyle={styles.listContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={onRefresh}
+              tintColor={Colors.purple}
+            />
+          }
+          ListHeaderComponent={
+            <View style={styles.header}>
+              {/* Greeting */}
+              <View style={styles.greetingRow}>
+                <View>
+                  <Text style={styles.greeting}>
+                    {timeOfDayGreeting()}, {user?.displayName ?? 'Reader'}! 👋
+                  </Text>
+                  <Text style={styles.greetingSubtitle}>What would you like to read today?</Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.generateBtn}
+                  onPress={() => navigation.navigate('GenerateStory')}
+                  accessibilityLabel="Generate a new story with AI"
+                >
+                  <Text style={styles.generateEmoji}>✨</Text>
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity
-                style={styles.generateBtn}
-                onPress={() => navigation.navigate('GenerateStory')}
-                accessibilityLabel="Generate a new story with AI"
-              >
-                <Text style={styles.generateEmoji}>✨</Text>
-              </TouchableOpacity>
-            </View>
 
-            {/* Search bar */}
-            <View style={styles.searchBar}>
-              <Text style={styles.searchIcon}>🔍</Text>
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Search stories..."
-                placeholderTextColor={Colors.textMuted}
-                value={search}
-                onChangeText={setSearch}
-                returnKeyType="search"
-                accessibilityLabel="Search stories"
-              />
-              {search.length > 0 && (
-                <TouchableOpacity onPress={() => setSearch('')}>
-                  <Text style={styles.clearIcon}>✕</Text>
+              {/* Search bar */}
+              <View style={styles.searchBar}>
+                <Text style={styles.searchIcon}>🔍</Text>
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Search stories..."
+                  placeholderTextColor={Colors.textMuted}
+                  value={search}
+                  onChangeText={setSearch}
+                  returnKeyType="search"
+                  accessibilityLabel="Search stories"
+                />
+                {search.length > 0 && (
+                  <TouchableOpacity onPress={() => setSearch('')}>
+                    <Text style={styles.clearIcon}>✕</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {stories.length > 0 && (
+                <Text style={styles.resultsCount}>
+                  {stories.length} stor{stories.length === 1 ? 'y' : 'ies'} found
+                </Text>
+              )}
+
+              {/* Parent Dashboard shortcut — only for PARENT / EDUCATOR */}
+              {(user?.role === 'PARENT' || user?.role === 'EDUCATOR') && (
+                <TouchableOpacity
+                  style={styles.dashboardBanner}
+                  onPress={() => navigation.navigate('ParentDashboard')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Open Parent Dashboard"
+                >
+                  <Text style={styles.dashboardBannerEmoji}>👩‍👦</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.dashboardBannerTitle}>Parent Dashboard</Text>
+                    <Text style={styles.dashboardBannerSubtitle}>
+                      View reading progress, skills & tips
+                    </Text>
+                  </View>
+                  <Text style={styles.dashboardBannerArrow}>→</Text>
                 </TouchableOpacity>
               )}
             </View>
-
-            {stories.length > 0 && (
-              <Text style={styles.resultsCount}>
-                {stories.length} stor{stories.length === 1 ? 'y' : 'ies'} found
+          }
+          renderItem={({ item }) => (
+            // flex:1 lets each card fill its column in the 2-col tablet grid
+            <View style={isTablet ? styles.tabletCardWrapper : undefined}>
+              <StoryCard
+                item={item}
+                onPress={() => navigation.navigate('StoryDetail', { storyId: item.id })}
+              />
+            </View>
+          )}
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyEmoji}>📭</Text>
+              <Text style={styles.emptyTitle}>No stories yet</Text>
+              <Text style={styles.emptySubtitle}>
+                Tap ✨ to generate your first story with AI!
               </Text>
-            )}
-
-            {/* Parent Dashboard shortcut — only for PARENT / EDUCATOR */}
-            {(user?.role === 'PARENT' || user?.role === 'EDUCATOR') && (
-              <TouchableOpacity
-                style={styles.dashboardBanner}
-                onPress={() => navigation.navigate('ParentDashboard')}
-                accessibilityRole="button"
-                accessibilityLabel="Open Parent Dashboard"
-              >
-                <Text style={styles.dashboardBannerEmoji}>👩‍👦</Text>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.dashboardBannerTitle}>Parent Dashboard</Text>
-                  <Text style={styles.dashboardBannerSubtitle}>
-                    View reading progress, skills & tips
-                  </Text>
-                </View>
-                <Text style={styles.dashboardBannerArrow}>→</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        }
-        renderItem={({ item }) => (
-          <StoryCard
-            item={item}
-            onPress={() => navigation.navigate('StoryDetail', { storyId: item.id })}
-          />
-        )}
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyEmoji}>📭</Text>
-            <Text style={styles.emptyTitle}>No stories yet</Text>
-            <Text style={styles.emptySubtitle}>
-              Tap ✨ to generate your first story with AI!
-            </Text>
-          </View>
-        }
-        onEndReached={() => { if (!isFetchingMore) void fetchStories(); }}
-        onEndReachedThreshold={0.3}
-        ListFooterComponent={
-          isFetchingMore ? (
-            <LoadingSpinner message="Loading more..." />
-          ) : null
-        }
-      />
+            </View>
+          }
+          onEndReached={() => { if (!isFetchingMore) void fetchStories(); }}
+          onEndReachedThreshold={0.3}
+          ListFooterComponent={
+            isFetchingMore ? (
+              <LoadingSpinner message="Loading more..." />
+            ) : null
+          }
+        />
+      </View>
     </SafeScreen>
   );
 }
 
 const styles = StyleSheet.create({
   listContent: {
-    paddingHorizontal: Spacing.screen,
+    paddingHorizontal: SCREEN_PADDING,
     paddingBottom: Spacing.xxxl,
   },
   header: {
@@ -451,5 +466,12 @@ const styles = StyleSheet.create({
     fontSize: FontSize.xl,
     color: Colors.purple,
     fontWeight: '700',
+  },
+  // Tablet-only styles
+  columnWrapper: {
+    gap: Spacing.md,
+  },
+  tabletCardWrapper: {
+    flex: 1,
   },
 });

@@ -14,6 +14,7 @@ import { SafeScreen } from '../../components/common/SafeScreen';
 import { Button } from '../../components/ui/Button';
 import { InputField } from '../../components/ui/InputField';
 import { useAuth } from '../../contexts/AuthContext';
+import { isTablet, FORM_MAX_WIDTH } from '../../utils/responsive';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Register'>;
 
@@ -93,8 +94,9 @@ export function RegisterScreen({ navigation }: Props) {
 
   return (
     <SafeScreen scrollable withKeyboard backgroundColor={Colors.cream}>
-      {/* Back button */}
-      <TouchableOpacity
+      <View style={[styles.container, isTablet && styles.containerTablet]}>
+        {/* Back button */}
+        <TouchableOpacity
         style={styles.backBtn}
         onPress={() => (step === 2 ? setStep(1) : navigation.goBack())}
         accessibilityRole="button"
@@ -210,16 +212,26 @@ export function RegisterScreen({ navigation }: Props) {
       )}
 
       <View style={styles.footer}>
-        <Text style={styles.footerText}>Already have an account? </Text>
-        <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-          <Text style={styles.footerLink}>Sign in</Text>
-        </TouchableOpacity>
+          <Text style={styles.footerText}>Already have an account? </Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+            <Text style={styles.footerLink}>Sign in</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </SafeScreen>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  containerTablet: {
+    maxWidth: FORM_MAX_WIDTH,
+    width: '100%',
+    alignSelf: 'center',
+    paddingVertical: Spacing.xl,
+  },
   backBtn: { paddingVertical: Spacing.sm, marginBottom: Spacing.sm },
   backText: { fontSize: FontSize.md, color: Colors.purple, fontWeight: '600' },
   progressRow: {
