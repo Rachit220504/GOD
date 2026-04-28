@@ -1,4 +1,5 @@
-import React, { useRef, useEffect, useCallback } from 'react';
+import * as React from 'react';
+import { useRef, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, Animated, TouchableOpacity, Modal,
   PanResponder, Dimensions,
