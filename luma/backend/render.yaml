@@ -1,0 +1,37 @@
+# LUMA Backend — Render Deployment Config
+# Render automatically reads this file when deploying
+
+services:
+  - type: web
+    name: luma-api
+    runtime: node
+    region: oregon
+    plan: free
+    buildCommand: npm install && npm run prisma:migrate:deploy && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 4000
+      - key: DATABASE_URL
+        sync: false   # Set in Render dashboard — never commit secrets
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: JWT_REFRESH_SECRET
+        sync: false
+      - key: JWT_REFRESH_EXPIRES_IN
+        value: 30d
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: ALLOWED_ORIGINS
+        value: https://luma-reading.app,https://www.luma-reading.app
+      - key: RATE_LIMIT_WINDOW_MS
+        value: 900000
+      - key: RATE_LIMIT_MAX_REQUESTS
+        value: 100
+      - key: LOG_LEVEL
+        value: info

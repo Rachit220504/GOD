@@ -1,0 +1,156 @@
+@import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── CSS Variables ──────────────────────────────────────────────────────────── */
+:root {
+  --cream:         #FDFBF7;
+  --soft-blue:     #F0F4F8;
+  --soft-peach:    #FFF5F0;
+  --lavender:      #F3F0FF;
+  --mint:          #F0FFF4;
+  --purple:        #6C5CE7;
+  --purple-light:  #A29BFE;
+  --orange:        #FF9F43;
+  --orange-light:  #FFEAA7;
+  --text-primary:  #2D3436;
+  --text-secondary:#636E72;
+  --text-muted:    #B2BEC3;
+  --border:        #E8E4DC;
+  --success:       #00B894;
+}
+
+/* ─── Base ───────────────────────────────────────────────────────────────────── */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Lexend', system-ui, -apple-system, sans-serif;
+  background-color: var(--cream);
+  color: var(--text-primary);
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ─── Typography ─────────────────────────────────────────────────────────────── */
+h1, h2, h3, h4 {
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  color: var(--text-primary);
+}
+
+p {
+  color: var(--text-secondary);
+  font-size: 1.0625rem;
+  line-height: 1.75;
+  letter-spacing: 0.01em;
+}
+
+/* ─── Utilities ─────────────────────────────────────────────────────────────── */
+.section-padding { padding: 5rem 1.5rem; }
+.container-wide  { max-width: 1200px; margin: 0 auto; }
+.container-mid   { max-width: 900px;  margin: 0 auto; }
+.container-narrow{ max-width: 680px;  margin: 0 auto; }
+
+/* ─── Gradient text ─────────────────────────────────────────────────────────── */
+.gradient-text {
+  background: linear-gradient(135deg, var(--purple), var(--orange));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ─── Glass card ────────────────────────────────────────────────────────────── */
+.glass-card {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 24px;
+  box-shadow: 0 8px 32px rgba(108, 92, 231, 0.06);
+}
+
+/* ─── Button base ───────────────────────────────────────────────────────────── */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.875rem 2rem;
+  background: var(--purple);
+  color: #fff;
+  font-weight: 700;
+  font-size: 1.0625rem;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  box-shadow: 0 4px 20px rgba(108, 92, 231, 0.35);
+  text-decoration: none;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(108, 92, 231, 0.45);
+  background: #5B4DD6;
+}
+.btn-primary:active { transform: translateY(0); }
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.875rem 2rem;
+  background: rgba(108, 92, 231, 0.1);
+  color: var(--purple);
+  font-weight: 700;
+  font-size: 1.0625rem;
+  border-radius: 999px;
+  border: 2px solid var(--purple-light);
+  cursor: pointer;
+  transition: transform 0.2s ease, background 0.2s ease;
+  text-decoration: none;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+.btn-secondary:hover {
+  transform: translateY(-2px);
+  background: rgba(108, 92, 231, 0.15);
+}
+
+/* ─── Feature card accent line ──────────────────────────────────────────────── */
+.card-accent { position: relative; overflow: hidden; }
+.card-accent::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--purple), var(--orange));
+  border-radius: 24px 24px 0 0;
+}
+
+/* ─── Scrollbar styling ─────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--cream); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* ─── Focus styles ──────────────────────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--purple);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* ─── Selection ─────────────────────────────────────────────────────────────── */
+::selection { background: var(--lavender); color: var(--purple); }
+
+/* ─── Responsive typography ─────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .section-padding { padding: 3.5rem 1.25rem; }
+  h1 { font-size: clamp(2rem, 8vw, 3.5rem); }
+  h2 { font-size: clamp(1.5rem, 6vw, 2.5rem); }
+}

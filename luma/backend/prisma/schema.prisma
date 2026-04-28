@@ -1,0 +1,155 @@
+// LUMA — Prisma Schema
+// Database: PostgreSQL (Neon or local)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum Role {
+  CHILD
+  PARENT
+  EDUCATOR
+}
+
+enum ReadingLevel {
+  BEGINNER     // Ages 5–7, simple 3-letter words
+  ELEMENTARY   // Ages 7–9, short sentences
+  INTERMEDIATE // Ages 9–11, multi-syllable words
+  ADVANCED     // Ages 11+, complex passages
+}
+
+enum ContentStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+// ─── User ─────────────────────────────────────────────────────────────────────
+
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String
+  role         Role      @default(CHILD)
+  isVerified   Boolean   @default(false)
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // Relations
+  profile          Profile?
+  sessions         SessionProgress[]
+  generatedContent GeneratedContent[]
+  childProfiles    ChildProfile[]     @relation("ParentChildren")
+  parentLink       ChildProfile?      @relation("ChildParent")
+
+  @@map("users")
+}
+
+// ─── Profile ──────────────────────────────────────────────────────────────────
+
+model Profile {
+  id           String       @id @default(uuid())
+  userId       String       @unique
+  displayName  String
+  avatarUrl    String?
+  age          Int?
+  readingLevel ReadingLevel @default(BEGINNER)
+
+  // Accessibility / Reading Comfort settings
+  fontSize        Float   @default(18)   // px
+  letterSpacing   Float   @default(0.08) // em (8%)
+  lineHeight      Float   @default(1.5)
+  backgroundColor String  @default("#FDFBF7")
+  fontFamily      String  @default("Lexend")
+
+  // Gamification
+  totalPoints     Int     @default(0)
+  currentStreak   Int     @default(0)
+  longestStreak   Int     @default(0)
+  booksCompleted  Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("profiles")
+}
+
+// ─── Child ↔ Parent Link ──────────────────────────────────────────────────────
+
+model ChildProfile {
+  id       String @id @default(uuid())
+  childId  String @unique
+  parentId String
+
+  child  User @relation("ChildParent", fields: [childId], references: [id], onDelete: Cascade)
+  parent User @relation("ParentChildren", fields: [parentId], references: [id], onDelete: Cascade)
+
+  linkedAt DateTime @default(now())
+
+  @@map("child_profiles")
+}
+
+// ─── Generated Content (AI Stories) ──────────────────────────────────────────
+
+model GeneratedContent {
+  id            String       @id @default(uuid())
+  createdById   String
+  title         String
+  body          String       @db.Text
+  syllableMap   Json         // { word: string, syllables: string[], chunks: string[] }[]
+  readingLevel  ReadingLevel
+  topic         String?
+  ageGroup      String?      // e.g. "7-10"
+  wordCount     Int
+  estimatedMins Int
+  status        ContentStatus @default(PUBLISHED)
+  tags          String[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  createdBy User              @relation(fields: [createdById], references: [id])
+  sessions  SessionProgress[]
+
+  @@map("generated_content")
+}
+
+// ─── Session Progress ─────────────────────────────────────────────────────────
+
+model SessionProgress {
+  id        String @id @default(uuid())
+  userId    String
+  contentId String
+
+  // Metrics
+  wordsRead       Int     @default(0)
+  wordsPerMinute  Float   @default(0)
+  accuracyPercent Float   @default(0)
+  completionPct   Float   @default(0)
+  durationSeconds Int     @default(0)
+  helpRequestCount Int    @default(0)
+
+  // Reading comfort used during session
+  fontSizeUsed        Float?
+  letterSpacingUsed   Float?
+  lineHeightUsed      Float?
+  backgroundColorUsed String?
+
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+
+  user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content GeneratedContent @relation(fields: [contentId], references: [id])
+
+  @@map("session_progress")
+}
