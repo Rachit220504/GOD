@@ -22,7 +22,8 @@
         "backgroundColor": "#6C5CE7"
       },
       "package": "com.luma.reading",
-      "permissions": []
+      "permissions": [],
+      "softwareKeyboardLayoutMode": "pan"
     },
     "web": {
       "favicon": "./assets/favicon.png"

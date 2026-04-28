@@ -7,6 +7,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  TextInput,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../../types';
@@ -27,6 +28,9 @@ export function LoginScreen({ navigation }: Props) {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+
+  // 1. Added the Ref to control the password input focus
+  const passwordRef = useRef<TextInput>(null);
 
   const shakeAnim = useRef(new Animated.Value(0)).current;
 
@@ -85,6 +89,7 @@ export function LoginScreen({ navigation }: Props) {
         <Animated.View
           style={[styles.form, { transform: [{ translateX: shakeAnim }] }]}
         >
+          {/* 2. Added all anti-jumping props to the Email Field */}
           <InputField
             label="Email address"
             value={email}
@@ -94,10 +99,16 @@ export function LoginScreen({ navigation }: Props) {
             autoCapitalize="none"
             autoComplete="email"
             returnKeyType="next"
+            autoCorrect={false}          // Stops Android spellchecker focus drops
+            importantForAutofill="no"    // Stops Android autofill jumping
+            blurOnSubmit={false}         // Keeps keyboard open when hitting "Next"
+            onSubmitEditing={() => passwordRef.current?.focus()} // Explicitly target password
             required
           />
 
+          {/* 3. Attached the ref to the Password field */}
           <InputField
+            ref={passwordRef}
             label="Password"
             value={password}
             onChangeText={setPassword}

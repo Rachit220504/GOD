@@ -8,12 +8,10 @@ import {
   Platform,
   StatusBar,
 } from 'react-native';
-// Use the new safe-area-context to fix the warning
-import { SafeAreaView } from 'react-native-safe-area-context';
+// FIX: Use the hook instead of the wrapper component to stop layout squishing
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useReadingComfort } from '../../contexts/ReadingComfortContext';
 import { SCREEN_PADDING } from '../../utils/responsive';
-
-// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface SafeScreenProps {
   children: ReactNode;
@@ -23,8 +21,6 @@ interface SafeScreenProps {
   backgroundColor?: string;
   withPadding?: boolean;
 }
-
-// ─── Component ────────────────────────────────────────────────────────────────
 
 export function SafeScreen({
   children,
@@ -37,38 +33,30 @@ export function SafeScreen({
   const { backgroundColor: comfortBg } = useReadingComfort();
   const bg = backgroundColor ?? comfortBg;
 
+  // Get safe area bounds manually
+  const insets = useSafeAreaInsets();
+
   const inner = scrollable ? (
     <ScrollView
       style={{ flex: 1, backgroundColor: bg }}
       contentContainerStyle={[
         withPadding && styles.padded,
         contentStyle,
+        { flexGrow: 1 }
       ]}
-      keyboardShouldPersistTaps="handled"
+      keyboardShouldPersistTaps="always"
       showsVerticalScrollIndicator={false}
     >
       {children}
     </ScrollView>
   ) : (
-    <View
-      style={[
-        styles.view,
-        { backgroundColor: bg },
-        withPadding && styles.padded,
-        contentStyle,
-      ]}
-    >
+    <View style={[styles.view, { backgroundColor: bg }, withPadding && styles.padded, contentStyle]}>
       {children}
     </View>
   );
 
-  const content = withKeyboard ? (
-    <KeyboardAvoidingView
-      style={[styles.flex, { backgroundColor: bg }]}
-      // FIX: Use undefined for Android so it doesn't fight the native keyboard
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-    >
+  const content = (withKeyboard && Platform.OS === 'ios') ? (
+    <KeyboardAvoidingView style={[styles.flex, { backgroundColor: bg }]} behavior="padding">
       {inner}
     </KeyboardAvoidingView>
   ) : (
@@ -76,28 +64,27 @@ export function SafeScreen({
   );
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: bg }]}>
-      <StatusBar
-        barStyle="dark-content"
-        backgroundColor={bg}
-        translucent={false}
-      />
+    // FIX: Apply safe area insets manually as padding to a standard View
+    <View
+      style={[
+        styles.safe,
+        {
+          backgroundColor: bg,
+          paddingTop: insets.top,
+          paddingLeft: insets.left,
+          paddingRight: insets.right,
+        },
+      ]}
+    >
+      <StatusBar barStyle="dark-content" backgroundColor={bg} translucent={false} />
       {content}
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-  },
-  flex: {
-    flex: 1,
-  },
-  view: {
-    flex: 1,
-  },
-  padded: {
-    padding: SCREEN_PADDING,
-  },
+  safe: { flex: 1 },
+  flex: { flex: 1 },
+  view: { flex: 1 },
+  padded: { padding: SCREEN_PADDING },
 });
