@@ -14,6 +14,7 @@ import { StoryDetailScreen } from '../screens/home/StoryDetailScreen';
 import { ReadingModeScreen } from '../screens/reading/ReadingModeScreen';
 import { GenerateStoryScreen } from '../screens/home/GenerateStoryScreen';
 import { ParentDashboardScreen } from '../screens/parent/ParentDashboardScreen';
+import { LinkChildScreen } from '../screens/parent/LinkChildScreen';
 
 // ─── Tab bar icon ─────────────────────────────────────────────────────────────
 
@@ -51,6 +52,7 @@ function HomeStackNavigator() {
       <HomeStack.Screen name="ReadingMode" component={ReadingModeScreen} />
       <HomeStack.Screen name="GenerateStory" component={GenerateStoryScreen} />
       <HomeStack.Screen name="ParentDashboard" component={ParentDashboardScreen} />
+      <HomeStack.Screen name="LinkChild" component={LinkChildScreen} />
     </HomeStack.Navigator>
   );
 }

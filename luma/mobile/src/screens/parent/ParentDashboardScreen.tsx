@@ -2,6 +2,8 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated,
 } from 'react-native';
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { HomeStackParamList } from '../../types';
 import { Colors, FontSize, Spacing, BorderRadius, Shadow } from '../../constants/theme';
 import { SafeScreen } from '../../components/common/SafeScreen';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
@@ -30,12 +32,15 @@ const TABS: { id: Tab; label: string; emoji: string }[] = [
 
 interface ChildProfile {
   id: string;
+  email: string;
   displayName: string;
   readingLevel: string;
   totalPoints: number;
   currentStreak: number;
   booksCompleted: number;
 }
+
+type Props = NativeStackScreenProps<HomeStackParamList, 'ParentDashboard'>;
 
 // ─── Overview Tab ─────────────────────────────────────────────────────────────
 
@@ -350,7 +355,7 @@ function TipsTab({ userId }: { userId: string }) {
 
 // ─── Main Dashboard Screen ────────────────────────────────────────────────────
 
-export function ParentDashboardScreen() {
+export function ParentDashboardScreen({ navigation }: Props) {
   const { user } = useAuth();
   const { isAllowed } = useRoleGuard(['PARENT', 'EDUCATOR']);
   const [activeTab, setActiveTab] = useState<Tab>('overview');
@@ -362,19 +367,30 @@ export function ParentDashboardScreen() {
   // Guard: only PARENT and EDUCATOR can access
   if (!isAllowed) return null;
 
+  const loadChildren = useCallback(async () => {
+    try {
+      const kids = await profileApi.getMyChildren();
+      setChildren(kids);
+      if (kids.length > 0) {
+        setSelectedChild(kids[0]!);
+      }
+    } catch {
+      // Silently fail - will show empty state
+    } finally {
+      setIsLoadingChildren(false);
+    }
+  }, []);
+
   useEffect(() => {
-    if (!user) return;
-    profileApi.getProfile(user.id)
-      .then((profile) => {
-        const kids = (profile as Record<string, unknown>)['children'] as ChildProfile[] | undefined;
-        if (kids?.length) {
-          setChildren(kids);
-          setSelectedChild(kids[0]!);
-        }
-      })
-      .catch(() => null)
-      .finally(() => setIsLoadingChildren(false));
-  }, [user?.id]);
+    void loadChildren();
+  }, [loadChildren]);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      void loadChildren();
+    });
+    return unsubscribe;
+  }, [navigation, loadChildren]);
 
   const handleTabChange = (tab: Tab) => {
     const idx = TABS.findIndex((t) => t.id === tab);
@@ -391,12 +407,21 @@ export function ParentDashboardScreen() {
 
   if (children.length === 0) {
     return (
-      <SafeScreen>
-        <EmptyState
-          emoji="👨‍👧"
-          title="No children linked"
-          message={"Go to Settings → Link Child Account\nto connect your child's reading profile."}
-        />
+      <SafeScreen scrollable backgroundColor={Colors.cream}>
+        <View style={s.emptyContainer}>
+          <Text style={s.emptyEmoji}>👨‍👧</Text>
+          <Text style={s.emptyTitle}>No children linked</Text>
+          <Text style={s.emptyMessage}>
+            Link your child's account to track their reading progress and view their achievements.
+          </Text>
+          <TouchableOpacity
+            style={s.linkChildBtn}
+            onPress={() => navigation.navigate('LinkChild')}
+            accessibilityRole="button"
+          >
+            <Text style={s.linkChildBtnText}>🔗 Link Child Account</Text>
+          </TouchableOpacity>
+        </View>
       </SafeScreen>
     );
   }
@@ -405,7 +430,16 @@ export function ParentDashboardScreen() {
     <SafeScreen withPadding={false}>
       {/* Header */}
       <View style={s.header}>
-        <Text style={s.headerTitle}>Parent Dashboard 👩‍👦</Text>
+        <View style={s.headerTop}>
+          <Text style={s.headerTitle}>Parent Dashboard 👩‍👦</Text>
+          <TouchableOpacity
+            style={s.linkChildHeaderBtn}
+            onPress={() => navigation.navigate('LinkChild')}
+            accessibilityRole="button"
+          >
+            <Text style={s.linkChildHeaderBtnText}>+ Link Child</Text>
+          </TouchableOpacity>
+        </View>
 
         {/* Child selector */}
         {children.length > 1 && (
@@ -536,4 +570,17 @@ const s = StyleSheet.create({
   tipBullet: { fontSize: FontSize.xl, color: Colors.orange, lineHeight: 26 },
   tipText: { flex: 1, fontSize: FontSize.md, color: Colors.textPrimary, lineHeight: 26, letterSpacing: 0.2 },
   tipsFooter: { fontSize: FontSize.xs, color: Colors.textMuted, textAlign: 'center', marginTop: Spacing.sm },
+
+  // Empty state
+  emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: Spacing.xxl },
+  emptyEmoji: { fontSize: 64, marginBottom: Spacing.lg },
+  emptyTitle: { fontSize: FontSize.xxl, fontWeight: '800', color: Colors.textPrimary, marginBottom: Spacing.md, textAlign: 'center' },
+  emptyMessage: { fontSize: FontSize.md, color: Colors.textSecondary, textAlign: 'center', marginBottom: Spacing.xl, lineHeight: 24 },
+  linkChildBtn: { backgroundColor: Colors.purple, paddingVertical: Spacing.md, paddingHorizontal: Spacing.xl, borderRadius: BorderRadius.lg },
+  linkChildBtnText: { fontSize: FontSize.md, color: Colors.white, fontWeight: '700' },
+
+  // Header Link Child button
+  headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.md },
+  linkChildHeaderBtn: { backgroundColor: Colors.lavender, paddingVertical: Spacing.sm, paddingHorizontal: Spacing.md, borderRadius: BorderRadius.md },
+  linkChildHeaderBtnText: { fontSize: FontSize.sm, color: Colors.purple, fontWeight: '700' },
 });

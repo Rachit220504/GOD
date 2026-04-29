@@ -49,6 +49,16 @@ export interface Profile extends ReadingComfortSettings {
   booksCompleted: number;
 }
 
+export interface LinkedChild {
+  id: string;
+  email: string;
+  displayName: string;
+  readingLevel: ReadingLevel;
+  totalPoints: number;
+  currentStreak: number;
+  booksCompleted: number;
+}
+
 // ─── Content ──────────────────────────────────────────────────────────────────
 
 export interface SyllableEntry {
@@ -189,4 +199,5 @@ export type HomeStackParamList = {
   ReadingMode: { storyId: string };
   GenerateStory: undefined;
   ParentDashboard: undefined;
+  LinkChild: undefined;
 };

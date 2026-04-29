@@ -75,8 +75,6 @@ const BG_OPTIONS = [
 const FONT_OPTIONS = [
   { value: 'System', label: 'System' },
   { value: 'Lexend', label: 'Lexend' },
-  { value: 'Arial', label: 'Arial' },
-  { value: 'Verdana', label: 'Verdana' },
 ];
 
 // ─── ReadingControls ──────────────────────────────────────────────────────────

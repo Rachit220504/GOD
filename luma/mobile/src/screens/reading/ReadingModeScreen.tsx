@@ -5,6 +5,7 @@ import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Modal, Animated, Alert, Dimensions,
 } from 'react-native';
+import * as Speech from 'expo-speech';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { HomeStackParamList, Story, SyllableEntry } from '../../types';
 import { Colors, FontSize, Spacing, BorderRadius, Shadow } from '../../constants/theme';
@@ -46,6 +47,17 @@ const WordBreakdownSheet = memo(function WordBreakdownSheet({
     }).start();
   }, [visible]);
 
+  const speakWord = useCallback(() => {
+    if (entry) {
+      Speech.stop();
+      Speech.speak(entry.word, {
+        language: 'en-US',
+        pitch: 1.0,
+        rate: 0.8,
+      });
+    }
+  }, [entry]);
+
   if (!entry) return null;
 
   return (
@@ -57,6 +69,12 @@ const WordBreakdownSheet = memo(function WordBreakdownSheet({
           <TouchableOpacity activeOpacity={1}>
             <View style={wb.handle} />
             <Text style={wb.title}>Word Breakdown</Text>
+
+            {/* Speak Button */}
+            <TouchableOpacity style={wb.speakBtn} onPress={speakWord}>
+              <Text style={wb.speakBtnIcon}>🔊</Text>
+              <Text style={wb.speakBtnText}>Tap to hear pronunciation</Text>
+            </TouchableOpacity>
 
             {/* Syllable pills */}
             <View style={wb.syllableRow}>
@@ -489,11 +507,19 @@ const styles = StyleSheet.create({
   word: { color: Colors.textPrimary },
   wordHighlighted: {
     color: Colors.purple,
-    borderBottomWidth: 2,
-    borderBottomColor: Colors.purpleLight,
-    fontWeight: '600',
+    textDecorationLine: 'underline',
+    textDecorationColor: Colors.purple,
+    textDecorationStyle: 'solid',
+    borderBottomWidth: 3,
+    borderBottomColor: Colors.purple,
+    fontWeight: '700',
   },
-  wordReadHighlighted: { color: Colors.textMuted, borderBottomColor: Colors.border },
+  wordReadHighlighted: {
+    color: Colors.textMuted,
+    textDecorationLine: 'underline',
+    textDecorationColor: Colors.border,
+    borderBottomColor: Colors.border,
+  },
   finishBtn: { marginTop: Spacing.xl },
   noStory: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.lg, padding: Spacing.screen },
   noStoryTitle: { fontSize: FontSize.xxl, fontWeight: '800', color: Colors.textPrimary },
@@ -525,4 +551,7 @@ const wb = StyleSheet.create({
   chunkBox: { backgroundColor: Colors.lavender, borderRadius: BorderRadius.xl, padding: Spacing.lg, alignItems: 'center', gap: Spacing.xs },
   chunkLabel: { fontSize: FontSize.sm, fontWeight: '600', color: Colors.textSecondary, letterSpacing: 0.5 },
   chunkText: { fontSize: FontSize.xxxl, fontWeight: '800', color: Colors.textPrimary, letterSpacing: 2 },
+  speakBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.md, backgroundColor: Colors.purple, borderRadius: BorderRadius.xl, paddingVertical: Spacing.md, paddingHorizontal: Spacing.xl, marginBottom: Spacing.lg },
+  speakBtnIcon: { fontSize: 24 },
+  speakBtnText: { fontSize: FontSize.md, fontWeight: '700', color: Colors.white },
 });

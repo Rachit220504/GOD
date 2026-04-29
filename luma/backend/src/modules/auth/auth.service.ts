@@ -20,6 +20,7 @@ export interface RegisterInput {
   role?: Role;
   displayName: string;
   age?: number;
+  gender?: 'MALE' | 'FEMALE';
 }
 
 export interface LoginInput {
@@ -49,7 +50,7 @@ export interface AuthResult {
 
 export class AuthService {
   async register(input: RegisterInput): Promise<AuthResult> {
-    const { email, password, role = Role.CHILD, displayName, age } = input;
+    const { email, password, role = Role.CHILD, displayName, age, gender } = input;
 
     // Check for existing user
     const existing = await prisma.user.findUnique({ where: { email } });
@@ -64,6 +65,7 @@ export class AuthService {
         email,
         passwordHash,
         role,
+        gender: gender || null,
         profile: {
           create: {
             displayName,

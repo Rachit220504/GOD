@@ -63,9 +63,9 @@ export class ProfileService {
 
     if (!profile) throw new AppError('Profile not found.', 404);
 
-    // If requester is a PARENT, fetch their linked children
+    // If requester is a PARENT or EDUCATOR, fetch their linked children
     let children: LinkedChild[] | undefined;
-    if (requesterRole === 'PARENT' && userId === requesterId) {
+    if ((requesterRole === 'PARENT' || requesterRole === 'EDUCATOR') && userId === requesterId) {
       children = await this.getLinkedChildren(requesterId);
     }
 
@@ -101,7 +101,7 @@ export class ProfileService {
     logger.info(`Profile updated for user ${userId}`);
 
     let children: LinkedChild[] | undefined;
-    if (requesterRole === 'PARENT' && userId === requesterId) {
+    if ((requesterRole === 'PARENT' || requesterRole === 'EDUCATOR') && userId === requesterId) {
       children = await this.getLinkedChildren(requesterId);
     }
 
@@ -122,15 +122,12 @@ export class ProfileService {
       throw new AppError('You cannot link yourself as a child.', 400);
     }
 
-    // Check not already linked
-    const existingLink = await prisma.childProfile.findUnique({
-      where: { childId: child.id },
+    // Check if already linked to THIS specific adult (parent or educator)
+    const existingLink = await prisma.childProfile.findFirst({
+      where: { childId: child.id, parentId },
     });
     if (existingLink) {
-      if (existingLink.parentId === parentId) {
-        throw new AppError('This child is already linked to your account.', 409);
-      }
-      throw new AppError('This child account is already linked to another parent.', 409);
+      throw new AppError('This child is already linked to your account.', 409);
     }
 
     await prisma.childProfile.create({
@@ -170,11 +167,8 @@ export class ProfileService {
     // Own profile: always allowed
     if (targetUserId === requesterId) return;
 
-    // Educator: can view any profile
-    if (requesterRole === 'EDUCATOR') return;
-
-    // Parent: can access linked children's profiles
-    if (requesterRole === 'PARENT') {
+    // Educator or Parent: can access linked children's profiles
+    if (requesterRole === 'EDUCATOR' || requesterRole === 'PARENT') {
       const link = await prisma.childProfile.findFirst({
         where: { parentId: requesterId, childId: targetUserId },
       });

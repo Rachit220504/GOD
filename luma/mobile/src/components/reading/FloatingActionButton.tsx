@@ -135,7 +135,7 @@ export function FloatingActionButton({
           const idx = actions.length - 1 - reversedIdx;
           const slideY = slideAnims[idx]!.interpolate({
             inputRange: [0, 1],
-            outputRange: [0, -(56 + Spacing.sm) * (reversedIdx + 1)],
+            outputRange: [0, -(52 + 8) * (reversedIdx + 1)], // Compact 52px + 8px spacing
           });
           return (
             <Animated.View
@@ -199,27 +199,27 @@ const styles = StyleSheet.create({
   },
   fabContainer: {
     position: 'absolute',
-    bottom: Spacing.xl,
+    bottom: Math.min(Spacing.xl, 60), // Cap bottom spacing to avoid overlap with safe area
     right: Spacing.screen,
-    alignItems: 'center',
+    alignItems: 'flex-end', // Align to right edge
     zIndex: 99,
   },
   fab: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
     ...Shadow.lg,
   },
-  fabEmoji: { fontSize: 26 },
+  fabEmoji: { fontSize: 24 },
   actionItem: {
     position: 'absolute',
-    bottom: 0,
-    right: 0,
-    flexDirection: 'row',
+    bottom: 4,
+    right: 60, // Position to the left of FAB, not overlapping
+    flexDirection: 'row-reverse', // Icon first, then label going left
     alignItems: 'center',
-    gap: Spacing.sm,
+    gap: Spacing.xs,
   },
   actionLabel: {
     backgroundColor: Colors.textPrimary,
@@ -227,13 +227,13 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.xs,
     borderRadius: BorderRadius.lg,
     ...Shadow.sm,
+    maxWidth: 140, // Limit label width
   },
   actionLabelText: {
     fontSize: FontSize.sm,
     color: Colors.textOnDark,
     fontWeight: '600',
-    whiteSpace: 'nowrap',
-  } as Record<string, unknown>,
+  },
   actionBtn: {
     width: 48,
     height: 48,

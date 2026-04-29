@@ -81,38 +81,33 @@ export function LoginScreen({ navigation }: Props) {
         </View>
 
         <Animated.View style={[styles.form, { transform: [{ translateX: shakeAnim }] }]}>
-          <InputField
-            label="Email address"
+          <Text style={{ marginBottom: 8 }}>Email address *</Text>
+          <TextInput
             value={email}
             onChangeText={setEmail}
-            error={errors.email}
+            style={[styles.plainInput, errors.email && styles.plainInputError]}
             keyboardType="email-address"
             autoCapitalize="none"
             autoComplete="email"
             returnKeyType="next"
             blurOnSubmit={false}
             onSubmitEditing={() => passwordRef.current?.focus()}
-            required
           />
+          {errors.email && <Text style={{ color: Colors.error, marginBottom: 16 }}>{errors.email}</Text>}
 
-          <InputField
+          <Text style={{ marginBottom: 8 }}>Password *</Text>
+          <TextInput
             ref={passwordRef}
-            label="Password"
             value={password}
             onChangeText={setPassword}
-            error={errors.password}
+            style={[styles.plainInput, errors.password && styles.plainInputError]}
             secureTextEntry={!showPassword}
             autoComplete="password"
             returnKeyType="done"
+            blurOnSubmit={false}
             onSubmitEditing={handleLogin}
-            required
-            rightIcon={
-              <Text style={styles.showHide}>
-                {showPassword ? 'Hide' : 'Show'}
-              </Text>
-            }
-            onRightIconPress={() => setShowPassword((p) => !p)}
           />
+          {errors.password && <Text style={{ color: Colors.error, marginBottom: 16 }}>{errors.password}</Text>}
 
           <Button
             label="Sign In"
@@ -162,7 +157,7 @@ export function LoginScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flexGrow: 1,
   },
   containerTablet: {
     maxWidth: FORM_MAX_WIDTH,
@@ -260,5 +255,20 @@ const styles = StyleSheet.create({
     fontSize: FontSize.md,
     color: Colors.purple,
     fontWeight: '700',
+  },
+  plainInput: {
+    borderWidth: 2,
+    borderColor: Colors.border,
+    borderRadius: BorderRadius.lg,
+    backgroundColor: Colors.white,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    fontSize: FontSize.md,
+    color: Colors.textPrimary,
+    marginBottom: Spacing.md,
+    minHeight: 52,
+  },
+  plainInputError: {
+    borderColor: Colors.error,
   },
 });

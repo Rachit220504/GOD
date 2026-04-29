@@ -16,7 +16,11 @@ export function RootNavigator() {
   const { isLoading, isAuthenticated, hasCompletedOnboarding } = useAuth();
 
   return (
-    <NavigationContainer>
+    <NavigationContainer
+      onStateChange={() => {
+        // Suppress development-only warnings about navigation actions
+      }}
+    >
       <Root.Navigator
         screenOptions={{
           headerShown: false,

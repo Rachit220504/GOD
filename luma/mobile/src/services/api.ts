@@ -12,6 +12,7 @@ import {
   ProgressStats,
   SyllableEntry,
   ReadingLevel,
+  LinkedChild,
 } from '../types';
 
 // ─── Config ───────────────────────────────────────────────────────────────────
@@ -187,6 +188,16 @@ export const profileApi = {
 
   async updateReadingComfort(userId: string, comfort: Partial<ReadingComfortSettings>): Promise<Profile> {
     const { data } = await api.put<ApiResponse<Profile>>(`/profile/${userId}`, comfort);
+    return data.data;
+  },
+
+  async linkChild(childEmail: string): Promise<{ message: string }> {
+    const { data } = await api.post<ApiResponse<{ message: string }>>('/profile/link-child', { childEmail });
+    return data.data;
+  },
+
+  async getMyChildren(): Promise<LinkedChild[]> {
+    const { data } = await api.get<ApiResponse<LinkedChild[]>>('/profile/my-children');
     return data.data;
   },
 };

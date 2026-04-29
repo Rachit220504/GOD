@@ -161,16 +161,48 @@ export function HomeScreen({ navigation }: Props) {
     return 'Good evening';
   };
 
+  // Parent/Educator view - redirect to appropriate dashboard
+  if (user?.role === 'PARENT' || user?.role === 'EDUCATOR') {
+    const isEducator = user?.role === 'EDUCATOR';
+    return (
+      <SafeScreen withPadding backgroundColor={Colors.cream}>
+        <View style={styles.parentContainer}>
+          <Text style={styles.parentEmoji}>{isEducator ? '🎓' : '👨‍👩‍👧‍👦'}</Text>
+          <Text style={styles.parentTitle}>
+            Welcome, {user?.displayName ?? (isEducator ? 'Teacher' : 'Parent')}!
+          </Text>
+          <Text style={styles.parentSubtitle}>
+            {isEducator
+              ? "Track your students' reading progress and help them grow."
+              : "Track your child's reading progress and help them grow."}
+          </Text>
+          <TouchableOpacity
+            style={styles.parentDashboardBtn}
+            onPress={() => navigation.navigate('ParentDashboard')}
+            accessibilityRole="button"
+          >
+            <Text style={styles.parentDashboardBtnText}>
+              {isEducator ? '📊 Go to Student Dashboard' : '📊 Go to Parent Dashboard'}
+            </Text>
+          </TouchableOpacity>
+          <Text style={styles.parentHint}>
+            You can also access this from the menu below
+          </Text>
+        </View>
+      </SafeScreen>
+    );
+  }
+
   if (isLoading) {
     return (
-      <SafeScreen>
+      <SafeScreen scrollable={false}>
         <LoadingSpinner fullScreen message="Loading your stories..." />
       </SafeScreen>
     );
   }
 
   return (
-    <SafeScreen withPadding={false}>
+    <SafeScreen withPadding={false} scrollable={false}>
       {/* On tablets, cap list width and centre it */}
       <View style={isTablet
         ? { flex: 1, maxWidth: CONTENT_MAX_WIDTH, width: '100%', alignSelf: 'center' }
@@ -324,7 +356,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     ...Shadow.sm,
   },
-  generateEmoji: { fontSize: 24 },
+  generateEmoji: { fontSize: 28 },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -473,5 +505,48 @@ const styles = StyleSheet.create({
   },
   tabletCardWrapper: {
     flex: 1,
+  },
+
+  // Parent view styles
+  parentContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: Spacing.xxl,
+  },
+  parentEmoji: {
+    fontSize: 64,
+    marginBottom: Spacing.lg,
+  },
+  parentTitle: {
+    fontSize: FontSize.xxl,
+    fontWeight: '800',
+    color: Colors.textPrimary,
+    textAlign: 'center',
+    marginBottom: Spacing.md,
+  },
+  parentSubtitle: {
+    fontSize: FontSize.md,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: Spacing.xl,
+    lineHeight: 24,
+  },
+  parentDashboardBtn: {
+    backgroundColor: Colors.purple,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.xl,
+    borderRadius: BorderRadius.lg,
+    marginBottom: Spacing.md,
+  },
+  parentDashboardBtnText: {
+    fontSize: FontSize.md,
+    color: Colors.white,
+    fontWeight: '700',
+  },
+  parentHint: {
+    fontSize: FontSize.sm,
+    color: Colors.textMuted,
+    textAlign: 'center',
   },
 });

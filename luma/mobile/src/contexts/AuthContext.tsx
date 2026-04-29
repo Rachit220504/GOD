@@ -29,6 +29,7 @@ interface RegisterPayload {
   role: 'CHILD' | 'PARENT' | 'EDUCATOR';
   displayName: string;
   age?: number;
+  gender?: 'MALE' | 'FEMALE';
 }
 
 // ─── Context ──────────────────────────────────────────────────────────────────
@@ -84,8 +85,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const result: AuthResult = await authApi.register(payload);
     await TokenStorage.save(result.tokens.accessToken, result.tokens.refreshToken);
     setUser(result.user);
-    // New users must complete onboarding
-    setHasCompletedOnboarding(false);
+    // Only CHILD users need to complete onboarding (reading level, age, etc.)
+    // PARENT and EDUCATOR users skip onboarding
+    setHasCompletedOnboarding(result.user.role !== 'CHILD');
   }, []);
 
   // ─── Logout ────────────────────────────────────────────────────────────────

@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Animated,
   ScrollView,
+  TextInput,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { OnboardingStackParamList } from '../../types';
@@ -82,16 +83,16 @@ export function OnboardingProfileScreen({ navigation }: Props) {
         </View>
 
         {/* Name Input */}
-        <InputField
-          label="What's your name?"
+        <Text style={{ marginBottom: 8, fontSize: FontSize.sm, fontWeight: '600', color: Colors.textPrimary }}>What's your name?</Text>
+        <TextInput
           value={name}
           onChangeText={setName}
-          error={nameError}
+          style={[styles.plainInput, nameError && styles.plainInputError, styles.nameInput]}
           placeholder="Type your name here..."
           autoCapitalize="words"
           autoFocus
-          style={styles.nameInput}
         />
+        {nameError && <Text style={{ color: Colors.error, marginBottom: 16 }}>{nameError}</Text>}
 
         {/* Age chips */}
         <Text style={styles.sectionLabel}>How old are you?</Text>
@@ -277,5 +278,20 @@ const styles = StyleSheet.create({
   continueBtn: {
     marginTop: Spacing.xxl,
     marginBottom: Spacing.xl,
+  },
+  plainInput: {
+    borderWidth: 2,
+    borderColor: Colors.border,
+    borderRadius: BorderRadius.lg,
+    backgroundColor: Colors.white,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    fontSize: FontSize.md,
+    color: Colors.textPrimary,
+    marginBottom: Spacing.md,
+    minHeight: 52,
+  },
+  plainInputError: {
+    borderColor: Colors.error,
   },
 });

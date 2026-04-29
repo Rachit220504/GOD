@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert,
+  View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, TextInput,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { HomeStackParamList, ReadingLevel } from '../../types';
@@ -86,16 +86,16 @@ export function GenerateStoryScreen({ navigation }: Props) {
       </View>
 
       {/* Topic input */}
-      <InputField
-        label="What should the story be about?"
+      <Text style={{ marginBottom: 8, fontSize: FontSize.sm, fontWeight: '600', color: Colors.textPrimary }}>What should the story be about? *</Text>
+      <TextInput
         value={topic}
         onChangeText={setTopic}
-        error={topicError}
+        style={[styles.plainInput, topicError && styles.plainInputError]}
         placeholder="e.g. a brave little turtle..."
         autoCapitalize="none"
         maxLength={100}
-        required
       />
+      {topicError && <Text style={{ color: Colors.error, marginBottom: 16 }}>{topicError}</Text>}
 
       {/* Topic suggestions */}
       <Text style={styles.sectionLabel}>Or pick an idea:</Text>
@@ -235,5 +235,20 @@ const styles = StyleSheet.create({
   generatingHint: {
     textAlign: 'center', fontSize: FontSize.sm, color: Colors.textMuted,
     marginTop: Spacing.md, letterSpacing: 0.3,
+  },
+  plainInput: {
+    borderWidth: 2,
+    borderColor: Colors.border,
+    borderRadius: BorderRadius.lg,
+    backgroundColor: Colors.white,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    fontSize: FontSize.md,
+    color: Colors.textPrimary,
+    marginBottom: Spacing.md,
+    minHeight: 52,
+  },
+  plainInputError: {
+    borderColor: Colors.error,
   },
 });

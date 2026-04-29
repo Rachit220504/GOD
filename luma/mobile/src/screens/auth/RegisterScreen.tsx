@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  TextInput,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../../types';
@@ -36,6 +37,7 @@ export function RegisterScreen({ navigation }: Props) {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [age, setAge] = useState('');
+  const [gender, setGender] = useState<'MALE' | 'FEMALE' | ''>('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -44,10 +46,17 @@ export function RegisterScreen({ navigation }: Props) {
     const newErrors: Record<string, string> = {};
     if (!displayName.trim() || displayName.length < 2)
       newErrors.displayName = 'Name must be at least 2 characters';
-    if (role === 'CHILD' && age) {
+    if (!gender)
+      newErrors.gender = 'Please select your gender';
+    if (age) {
       const ageNum = parseInt(age, 10);
-      if (isNaN(ageNum) || ageNum < 3 || ageNum > 18)
-        newErrors.age = 'Age must be between 3 and 18';
+      if (role === 'CHILD') {
+        if (isNaN(ageNum) || ageNum < 3 || ageNum > 18)
+          newErrors.age = 'Age must be between 3 and 18';
+      } else {
+        if (isNaN(ageNum) || ageNum < 18 || ageNum > 100)
+          newErrors.age = 'Age must be between 18 and 100';
+      }
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -83,6 +92,7 @@ export function RegisterScreen({ navigation }: Props) {
         role,
         displayName: displayName.trim(),
         age: age ? parseInt(age, 10) : undefined,
+        gender: gender || undefined,
       });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Registration failed. Please try again.';
@@ -138,27 +148,49 @@ export function RegisterScreen({ navigation }: Props) {
             ))}
           </View>
 
-          <InputField
-            label="Your name"
+          <Text style={{ marginBottom: 8 }}>Your name *</Text>
+          <TextInput
             value={displayName}
             onChangeText={setDisplayName}
-            error={errors.displayName}
+            style={[styles.plainInput, errors.displayName && styles.plainInputError]}
             autoCapitalize="words"
             placeholder="e.g. Aarav"
-            required
           />
+          {errors.displayName && <Text style={{ color: Colors.error, marginBottom: 16 }}>{errors.displayName}</Text>}
 
-          {role === 'CHILD' && (
-            <InputField
-              label="Age (optional)"
-              value={age}
-              onChangeText={setAge}
-              error={errors.age}
-              keyboardType="number-pad"
-              placeholder="e.g. 8"
-              maxLength={2}
-            />
-          )}
+          {/* Gender Selection */}
+          <Text style={{ marginBottom: 8 }}>Gender *</Text>
+          <View style={styles.genderRow}>
+            <TouchableOpacity
+              style={[styles.genderBtn, gender === 'MALE' && styles.genderBtnSelected]}
+              onPress={() => setGender('MALE')}
+            >
+              <Text style={styles.genderEmoji}>👦</Text>
+              <Text style={[styles.genderLabel, gender === 'MALE' && styles.genderLabelSelected]}>Boy</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.genderBtn, gender === 'FEMALE' && styles.genderBtnSelected]}
+              onPress={() => setGender('FEMALE')}
+            >
+              <Text style={styles.genderEmoji}>👧</Text>
+              <Text style={[styles.genderLabel, gender === 'FEMALE' && styles.genderLabelSelected]}>Girl</Text>
+            </TouchableOpacity>
+          </View>
+          {errors.gender && <Text style={{ color: Colors.error, marginBottom: 16 }}>{errors.gender}</Text>}
+
+          {/* Age - shown for all roles with different placeholders */}
+          <Text style={{ marginBottom: 8 }}>
+            Age {role === 'CHILD' ? '(optional)' : '*'}
+          </Text>
+          <TextInput
+            value={age}
+            onChangeText={setAge}
+            style={[styles.plainInput, errors.age && styles.plainInputError]}
+            keyboardType="number-pad"
+            placeholder={role === 'CHILD' ? 'e.g. 8' : 'e.g. 35'}
+            maxLength={role === 'CHILD' ? 2 : 3}
+          />
+          {errors.age && <Text style={{ color: Colors.error, marginBottom: 16 }}>{errors.age}</Text>}
 
           <Button label="Continue" onPress={handleNext} fullWidth size="lg" />
         </>
@@ -167,39 +199,35 @@ export function RegisterScreen({ navigation }: Props) {
           <Text style={styles.title}>Create your account</Text>
           <Text style={styles.subtitle}>Step 2 of 2 — Sign-in details</Text>
 
-          <InputField
-            label="Email address"
+          <Text style={{ marginBottom: 8 }}>Email address *</Text>
+          <TextInput
             value={email}
             onChangeText={setEmail}
-            error={errors.email}
+            style={[styles.plainInput, errors.email && styles.plainInputError]}
             keyboardType="email-address"
             autoCapitalize="none"
             autoComplete="email"
-            required
           />
+          {errors.email && <Text style={{ color: Colors.error, marginBottom: 16 }}>{errors.email}</Text>}
 
-          <InputField
-            label="Password"
+          <Text style={{ marginBottom: 8 }}>Password *</Text>
+          <TextInput
             value={password}
             onChangeText={setPassword}
-            error={errors.password}
+            style={[styles.plainInput, errors.password && styles.plainInputError]}
             secureTextEntry={!showPassword}
-            required
-            hint="Min 8 chars, one uppercase, one number"
-            rightIcon={
-              <Text style={styles.showHide}>{showPassword ? 'Hide' : 'Show'}</Text>
-            }
-            onRightIconPress={() => setShowPassword((p) => !p)}
           />
+          <Text style={{ fontSize: FontSize.sm, color: Colors.textMuted, marginBottom: 16 }}>Min 8 chars, one uppercase, one number</Text>
+          {errors.password && <Text style={{ color: Colors.error, marginBottom: 16 }}>{errors.password}</Text>}
 
-          <InputField
-            label="Confirm password"
+          <Text style={{ marginBottom: 8 }}>Confirm password *</Text>
+          <TextInput
             value={confirmPassword}
             onChangeText={setConfirmPassword}
-            error={errors.confirmPassword}
+            style={[styles.plainInput, errors.confirmPassword && styles.plainInputError]}
             secureTextEntry={!showPassword}
-            required
           />
+          {errors.confirmPassword && <Text style={{ color: Colors.error, marginBottom: 16 }}>{errors.confirmPassword}</Text>}
 
           <Button
             label="Create Account"
@@ -224,7 +252,7 @@ export function RegisterScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flexGrow: 1,
   },
   containerTablet: {
     maxWidth: FORM_MAX_WIDTH,
@@ -305,4 +333,52 @@ const styles = StyleSheet.create({
   },
   footerText: { fontSize: FontSize.md, color: Colors.textSecondary },
   footerLink: { fontSize: FontSize.md, color: Colors.purple, fontWeight: '700' },
+  plainInput: {
+    borderWidth: 2,
+    borderColor: Colors.border,
+    borderRadius: BorderRadius.lg,
+    backgroundColor: Colors.white,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    fontSize: FontSize.md,
+    color: Colors.textPrimary,
+    marginBottom: Spacing.md,
+    minHeight: 52,
+  },
+  plainInputError: {
+    borderColor: Colors.error,
+  },
+  genderRow: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+    marginBottom: Spacing.md,
+  },
+  genderBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: BorderRadius.xl,
+    backgroundColor: Colors.white,
+    borderWidth: 2,
+    borderColor: Colors.border,
+  },
+  genderBtnSelected: {
+    borderColor: Colors.purple,
+    backgroundColor: Colors.lavender,
+  },
+  genderEmoji: {
+    fontSize: 24,
+  },
+  genderLabel: {
+    fontSize: FontSize.md,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+  },
+  genderLabelSelected: {
+    color: Colors.purple,
+  },
 });

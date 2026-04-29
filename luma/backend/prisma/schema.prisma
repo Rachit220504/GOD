@@ -18,6 +18,11 @@ enum Role {
   EDUCATOR
 }
 
+enum Gender {
+  MALE
+  FEMALE
+}
+
 enum ReadingLevel {
   BEGINNER     // Ages 5–7, simple 3-letter words
   ELEMENTARY   // Ages 7–9, short sentences
@@ -38,6 +43,7 @@ model User {
   email        String    @unique
   passwordHash String
   role         Role      @default(CHILD)
+  gender       Gender?
   isVerified   Boolean   @default(false)
   isActive     Boolean   @default(true)
   createdAt    DateTime  @default(now())
@@ -48,7 +54,7 @@ model User {
   sessions         SessionProgress[]
   generatedContent GeneratedContent[]
   childProfiles    ChildProfile[]     @relation("ParentChildren")
-  parentLink       ChildProfile?      @relation("ChildParent")
+  parentLinks      ChildProfile[]     @relation("ChildParent")
 
   @@map("users")
 }
@@ -88,7 +94,7 @@ model Profile {
 
 model ChildProfile {
   id       String @id @default(uuid())
-  childId  String @unique
+  childId  String
   parentId String
 
   child  User @relation("ChildParent", fields: [childId], references: [id], onDelete: Cascade)
@@ -96,6 +102,8 @@ model ChildProfile {
 
   linkedAt DateTime @default(now())
 
+  // Allow same child to be linked to multiple adults, but prevent duplicate links from same adult
+  @@unique([childId, parentId])
   @@map("child_profiles")
 }
 

@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1.5,
+    borderWidth: 2,
     borderColor: Colors.border,
     borderRadius: BorderRadius.lg,
     backgroundColor: Colors.white,
@@ -135,7 +135,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.15,
     shadowRadius: 6,
-    elevation: 2,
   },
   error: {
     borderColor: Colors.error,

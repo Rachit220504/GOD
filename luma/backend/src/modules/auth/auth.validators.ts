@@ -28,6 +28,11 @@ export const registerValidators = [
     .optional()
     .isInt({ min: 3, max: 120 })
     .withMessage('Age must be a number between 3 and 120'),
+
+  body('gender')
+    .optional()
+    .isIn(['MALE', 'FEMALE'])
+    .withMessage('Gender must be one of: MALE, FEMALE'),
 ];
 
 export const loginValidators = [

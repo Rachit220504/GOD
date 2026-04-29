@@ -45,7 +45,7 @@ class GeminiService {
 
     this.client = new GoogleGenerativeAI(apiKey);
     this.model = this.client.getGenerativeModel({
-      model: process.env.GEMINI_MODEL ?? 'gemini-1.5-flash',
+      model: process.env.GEMINI_MODEL ?? 'gemini-1.5-flash-latest',
       safetySettings: [
         {
           category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
@@ -132,50 +132,68 @@ The syllableMap must include EVERY unique word in the story that has 2+ syllable
 For 1-syllable words, still include them if they might be challenging for a young reader.
 `.trim();
 
-    try {
-      logger.debug(`Generating story: topic="${topic}", level=${readingLevel}`);
-      const result = await this.model.generateContent(prompt);
-      const response = result.response;
-      const text = response.text();
+    const maxRetries = 3;
+    let lastError: Error | undefined;
 
-      // Strip any accidental markdown fences Gemini might add
-      const cleanJson = text.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
-      const parsed = JSON.parse(cleanJson) as {
-        title: string;
-        body: string;
-        tags: string[];
-        syllableMap: SyllableEntry[];
-      };
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        logger.debug(`Generating story: topic="${topic}", level=${readingLevel}, attempt=${attempt}`);
+        const result = await this.model.generateContent(prompt);
+        const response = result.response;
+        const text = response.text();
 
-      if (!parsed.title || !parsed.body || !Array.isArray(parsed.syllableMap)) {
-        throw new Error('Gemini returned malformed story JSON structure');
+        // Strip any accidental markdown fences Gemini might add
+        const cleanJson = text.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
+        const parsed = JSON.parse(cleanJson) as {
+          title: string;
+          body: string;
+          tags: string[];
+          syllableMap: SyllableEntry[];
+        };
+
+        if (!parsed.title || !parsed.body || !Array.isArray(parsed.syllableMap)) {
+          throw new Error('Gemini returned malformed story JSON structure');
+        }
+
+        const words = parsed.body.trim().split(/\s+/);
+        const wordCount = words.length;
+        const wordsPerMinute = readingLevel === 'BEGINNER' ? 50 : readingLevel === 'ELEMENTARY' ? 80 : 120;
+        const estimatedReadingMinutes = Math.max(1, Math.round(wordCount / wordsPerMinute));
+
+        const story: GeneratedStory = {
+          title: parsed.title,
+          body: parsed.body,
+          syllableMap: parsed.syllableMap,
+          wordCount,
+          estimatedReadingMinutes,
+          readingLevel,
+          topic,
+          ageGroup,
+          tags: parsed.tags ?? [],
+        };
+
+        logger.info(`Story generated: "${story.title}" (${wordCount} words)`);
+        return story;
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        const is503 = lastError.message.includes('503') || lastError.message.includes('high demand');
+
+        if (is503 && attempt < maxRetries) {
+          const delay = attempt * 1000; // 1s, 2s, 3s
+          logger.warn(`Gemini 503 error, retrying in ${delay}ms (attempt ${attempt}/${maxRetries})`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+
+        // Not a 503 or exhausted retries
+        logger.error('Gemini story generation failed:', error);
+        throw new Error(
+          `Story generation failed: ${lastError.message}`,
+        );
       }
-
-      const words = parsed.body.trim().split(/\s+/);
-      const wordCount = words.length;
-      const wordsPerMinute = readingLevel === 'BEGINNER' ? 50 : readingLevel === 'ELEMENTARY' ? 80 : 120;
-      const estimatedReadingMinutes = Math.max(1, Math.round(wordCount / wordsPerMinute));
-
-      const story: GeneratedStory = {
-        title: parsed.title,
-        body: parsed.body,
-        syllableMap: parsed.syllableMap,
-        wordCount,
-        estimatedReadingMinutes,
-        readingLevel,
-        topic,
-        ageGroup,
-        tags: parsed.tags ?? [],
-      };
-
-      logger.info(`Story generated: "${story.title}" (${wordCount} words)`);
-      return story;
-    } catch (error) {
-      logger.error('Gemini story generation failed:', error);
-      throw new Error(
-        `Story generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      );
     }
+
+    throw new Error(`Story generation failed after ${maxRetries} attempts: ${lastError?.message}`);
   }
 
   // ─── Syllabify a Single Text ───────────────────────────────────────────────
@@ -239,13 +257,25 @@ Rules:
   // ─── Health Check ──────────────────────────────────────────────────────────
 
   async ping(): Promise<boolean> {
-    try {
-      const result = await this.model.generateContent('Say "ok" and nothing else.');
-      const text = result.response.text().toLowerCase().trim();
-      return text.includes('ok');
-    } catch {
-      return false;
+    const maxRetries = 2;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const result = await this.model.generateContent('Say "ok" and nothing else.');
+        const text = result.response.text().toLowerCase().trim();
+        logger.info(`Gemini ping response: ${text}`);
+        return text.includes('ok');
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        const is503 = errorMsg.includes('503') || errorMsg.includes('high demand');
+        if (is503 && attempt < maxRetries) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          continue;
+        }
+        logger.error(`Gemini ping failed: ${errorMsg}`);
+        return false;
+      }
     }
+    return false;
   }
 }
 

@@ -8,8 +8,7 @@ import {
   Platform,
   StatusBar,
 } from 'react-native';
-// Use the native SafeAreaView, NOT the manual hook
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useReadingComfort } from '../../contexts/ReadingComfortContext';
 import { SCREEN_PADDING } from '../../utils/responsive';
 
@@ -24,7 +23,7 @@ interface SafeScreenProps {
 
 export function SafeScreen({
   children,
-  scrollable = false,
+  scrollable = true,
   withKeyboard = false,
   contentStyle,
   backgroundColor,
@@ -32,6 +31,7 @@ export function SafeScreen({
 }: SafeScreenProps) {
   const { backgroundColor: comfortBg } = useReadingComfort();
   const bg = backgroundColor ?? comfortBg;
+  const insets = useSafeAreaInsets();
 
   const inner = scrollable ? (
     <ScrollView
@@ -41,11 +41,8 @@ export function SafeScreen({
         contentStyle,
         { flexGrow: 1 }
       ]}
-      // CRITICAL: Must be "handled" to ignore phantom finger lifts
       keyboardShouldPersistTaps="handled"
-      keyboardDismissMode="none"
       showsVerticalScrollIndicator={false}
-      bounces={false} // Stops iOS/Android from bouncing and shifting
     >
       {children}
     </ScrollView>
@@ -55,7 +52,6 @@ export function SafeScreen({
     </View>
   );
 
-  // We only run KeyboardAvoidingView on iOS. Android handles itself.
   const content = (withKeyboard && Platform.OS === 'ios') ? (
     <KeyboardAvoidingView style={[styles.flex, { backgroundColor: bg }]} behavior="padding">
       {inner}
@@ -65,12 +61,21 @@ export function SafeScreen({
   );
 
   return (
-    // CRITICAL: edges={['top']} ensures the bottom of the screen never 
-    // recalculates and jumps when the Android keyboard opens.
-    <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: bg }]}>
+    <View
+      style={[
+        styles.safe,
+        {
+          backgroundColor: bg,
+          paddingTop: insets.top,
+          paddingLeft: insets.left,
+          paddingRight: insets.right,
+          paddingBottom: insets.bottom,
+        },
+      ]}
+    >
       <StatusBar barStyle="dark-content" backgroundColor={bg} translucent={false} />
       {content}
-    </SafeAreaView>
+    </View>
   );
 }
 
