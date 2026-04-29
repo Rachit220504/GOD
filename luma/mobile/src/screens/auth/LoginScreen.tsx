@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   Animated,
-  ScrollView,
   TouchableOpacity,
   Alert,
   TextInput,
@@ -29,9 +28,7 @@ export function LoginScreen({ navigation }: Props) {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
 
-  // 1. Added the Ref to control the password input focus
   const passwordRef = useRef<TextInput>(null);
-
   const shakeAnim = useRef(new Animated.Value(0)).current;
 
   const shake = () => {
@@ -74,9 +71,7 @@ export function LoginScreen({ navigation }: Props) {
 
   return (
     <SafeScreen scrollable withKeyboard backgroundColor={Colors.cream}>
-      {/* On tablet: centre & cap width so the form doesn't stretch edge-to-edge */}
       <View style={[styles.container, isTablet && styles.containerTablet]}>
-        {/* Header */}
         <View style={styles.header}>
           <View style={styles.logoMini}>
             <Text style={styles.logoEmoji}>🌟</Text>
@@ -85,11 +80,7 @@ export function LoginScreen({ navigation }: Props) {
           <Text style={styles.subtitle}>Sign in to continue reading</Text>
         </View>
 
-        {/* Form */}
-        <Animated.View
-          style={[styles.form, { transform: [{ translateX: shakeAnim }] }]}
-        >
-          {/* 2. Added all anti-jumping props to the Email Field */}
+        <Animated.View style={[styles.form, { transform: [{ translateX: shakeAnim }] }]}>
           <InputField
             label="Email address"
             value={email}
@@ -99,14 +90,11 @@ export function LoginScreen({ navigation }: Props) {
             autoCapitalize="none"
             autoComplete="email"
             returnKeyType="next"
-            autoCorrect={false}          // Stops Android spellchecker focus drops
-            importantForAutofill="no"    // Stops Android autofill jumping
-            blurOnSubmit={false}         // Keeps keyboard open when hitting "Next"
-            onSubmitEditing={() => passwordRef.current?.focus()} // Explicitly target password
+            blurOnSubmit={false}
+            onSubmitEditing={() => passwordRef.current?.focus()}
             required
           />
 
-          {/* 3. Attached the ref to the Password field */}
           <InputField
             ref={passwordRef}
             label="Password"
@@ -136,14 +124,12 @@ export function LoginScreen({ navigation }: Props) {
           />
         </Animated.View>
 
-        {/* Divider */}
         <View style={styles.divider}>
           <View style={styles.dividerLine} />
           <Text style={styles.dividerText}>or</Text>
           <View style={styles.dividerLine} />
         </View>
 
-        {/* Demo accounts */}
         <View style={styles.demoSection}>
           <Text style={styles.demoTitle}>Try a demo account</Text>
           {[
@@ -163,7 +149,6 @@ export function LoginScreen({ navigation }: Props) {
           ))}
         </View>
 
-        {/* Footer */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>Don't have an account? </Text>
           <TouchableOpacity onPress={() => navigation.navigate('Register')}>

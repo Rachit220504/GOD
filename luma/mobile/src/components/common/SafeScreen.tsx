@@ -8,8 +8,8 @@ import {
   Platform,
   StatusBar,
 } from 'react-native';
-// FIX: Use the hook instead of the wrapper component to stop layout squishing
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+// Use the native SafeAreaView, NOT the manual hook
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useReadingComfort } from '../../contexts/ReadingComfortContext';
 import { SCREEN_PADDING } from '../../utils/responsive';
 
@@ -33,9 +33,6 @@ export function SafeScreen({
   const { backgroundColor: comfortBg } = useReadingComfort();
   const bg = backgroundColor ?? comfortBg;
 
-  // Get safe area bounds manually
-  const insets = useSafeAreaInsets();
-
   const inner = scrollable ? (
     <ScrollView
       style={{ flex: 1, backgroundColor: bg }}
@@ -44,8 +41,11 @@ export function SafeScreen({
         contentStyle,
         { flexGrow: 1 }
       ]}
-      keyboardShouldPersistTaps="always"
+      // CRITICAL: Must be "handled" to ignore phantom finger lifts
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="none"
       showsVerticalScrollIndicator={false}
+      bounces={false} // Stops iOS/Android from bouncing and shifting
     >
       {children}
     </ScrollView>
@@ -55,6 +55,7 @@ export function SafeScreen({
     </View>
   );
 
+  // We only run KeyboardAvoidingView on iOS. Android handles itself.
   const content = (withKeyboard && Platform.OS === 'ios') ? (
     <KeyboardAvoidingView style={[styles.flex, { backgroundColor: bg }]} behavior="padding">
       {inner}
@@ -64,21 +65,12 @@ export function SafeScreen({
   );
 
   return (
-    // FIX: Apply safe area insets manually as padding to a standard View
-    <View
-      style={[
-        styles.safe,
-        {
-          backgroundColor: bg,
-          paddingTop: insets.top,
-          paddingLeft: insets.left,
-          paddingRight: insets.right,
-        },
-      ]}
-    >
+    // CRITICAL: edges={['top']} ensures the bottom of the screen never 
+    // recalculates and jumps when the Android keyboard opens.
+    <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: bg }]}>
       <StatusBar barStyle="dark-content" backgroundColor={bg} translucent={false} />
       {content}
-    </View>
+    </SafeAreaView>
   );
 }
 
