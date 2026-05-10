@@ -38,4 +38,28 @@ router.get(
   progressController.getUserProgress.bind(progressController),
 );
 
+/**
+ * @route  GET /api/progress/:userId/weekly
+ * @desc   Get weekly reading activity (Mon-Sun) for day circles UI
+ * @access Private
+ */
+router.get(
+  '/:userId/weekly',
+  userIdParamValidator,
+  validate,
+  progressController.getWeeklyActivity.bind(progressController),
+);
+
+/**
+ * @route  GET /api/progress/:userId/continue-reading
+ * @desc   Get the story to continue reading (most recent incomplete)
+ * @access Private
+ */
+router.get(
+  '/:userId/continue-reading',
+  userIdParamValidator,
+  validate,
+  progressController.getContinueReading.bind(progressController),
+);
+
 export default router;

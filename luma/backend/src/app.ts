@@ -5,6 +5,7 @@ import helmet from 'helmet';
 import compression from 'compression';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
+import os from 'os';
 
 import { connectDatabase, disconnectDatabase } from './config/database';
 import { logger } from './config/logger';
@@ -15,6 +16,10 @@ import profileRoutes from './modules/profile/profile.routes';
 import contentRoutes from './modules/content/content.routes';
 import progressRoutes from './modules/progress/progress.routes';
 import { analyticsRouter } from './modules/analytics/analytics.routes';
+import phonicsRoutes from './modules/phonics/phonics.routes';
+import { gamificationRoutes } from './routes/gamification.routes';
+import { phonicsService } from './modules/phonics/phonics.service';
+import { gamificationService } from './modules/gamification/gamification.service';
 
 // ─── App Setup ────────────────────────────────────────────────────────────────
 
@@ -38,21 +43,10 @@ app.use(
   }),
 );
 
-// CORS
-const allowedOrigins = (process.env['ALLOWED_ORIGINS'] ?? 'http://localhost:3000')
-  .split(',')
-  .map((o) => o.trim());
-
+// CORS - Allow all origins for mobile development
 app.use(
   cors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (mobile apps, curl, Postman)
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error(`CORS policy: origin '${origin}' is not allowed`));
-      }
-    },
+    origin: true,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
@@ -68,10 +62,16 @@ app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 
 // HTTP logging
 app.use(
-  morgan(process.env['NODE_ENV'] === 'production' ? 'combined' : 'dev', {
-    stream: { write: (msg: string) => logger.http(msg.trim()) },
+  morgan('combined', {
+    stream: { write: (msg: string) => logger.info(msg.trim()) },
   }),
 );
+
+// Debug: Log all API requests for troubleshooting
+app.use((req, res, next) => {
+  logger.debug(`→ ${req.method} ${req.path} - User: ${req.user?.id ?? 'none'}`);
+  next();
+});
 
 // ─── Rate Limiting ────────────────────────────────────────────────────────────
 
@@ -130,6 +130,8 @@ app.use(`${API_PREFIX}/profile`, profileRoutes);
 app.use(`${API_PREFIX}/content`, contentRoutes);
 app.use(`${API_PREFIX}/progress`, progressRoutes);
 app.use(`${API_PREFIX}/analytics`, analyticsRouter);
+app.use(`${API_PREFIX}/phonics`, phonicsRoutes);
+app.use(`${API_PREFIX}/gamification`, gamificationRoutes);
 
 // ─── 404 & Error Handling ─────────────────────────────────────────────────────
 
@@ -141,12 +143,31 @@ app.use(errorHandler);
 async function bootstrap(): Promise<void> {
   await connectDatabase();
 
-  const server = app.listen(PORT, () => {
+  // Auto-seed phonics lessons on startup
+  try {
+    await phonicsService.seedLessons();
+  } catch (err) {
+    logger.warn('Auto-seed failed:', err);
+  }
+
+  const server = app.listen(PORT, '0.0.0.0', () => {
+    // Get network interfaces for mobile device connection
+    const interfaces = os.networkInterfaces();
+    const addresses: string[] = [];
+    for (const name of Object.keys(interfaces)) {
+      for (const iface of interfaces[name] ?? []) {
+        if (iface.family === 'IPv4' && !iface.internal) {
+          addresses.push(iface.address);
+        }
+      }
+    }
+
     logger.info(`
 ╔══════════════════════════════════════════════════════╗
 ║           LUMA API — A Brighter Way to Read          ║
 ╠══════════════════════════════════════════════════════╣
-║  Server  : http://localhost:${PORT}                     ║
+║  Local   : http://localhost:${PORT}                     ║
+║  Network : ${addresses.map(a => `http://${a}:${PORT}`).join(', ')}║
 ║  Mode    : ${(process.env['NODE_ENV'] ?? 'development').padEnd(42)}║
 ║  Prefix  : ${API_PREFIX.padEnd(43)}║
 ╚══════════════════════════════════════════════════════╝

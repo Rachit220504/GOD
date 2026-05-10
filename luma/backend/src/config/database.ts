@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, PlantStage, AchievementType, RewardType } from '@prisma/client';
 import { logger } from './logger';
 
 declare global {
@@ -10,10 +10,7 @@ declare global {
 const prisma: PrismaClient =
   global.__prisma ??
   new PrismaClient({
-    log:
-      process.env.NODE_ENV === 'development'
-        ? ['query', 'info', 'warn', 'error']
-        : ['warn', 'error'],
+    log: ['warn', 'error'],
     errorFormat: 'colorless',
   });
 
@@ -36,4 +33,13 @@ export async function disconnectDatabase(): Promise<void> {
   logger.info('Database disconnected');
 }
 
-export { prisma };
+/**
+ * Emergency: Reset all connections
+ */
+export async function resetConnections(): Promise<void> {
+  await prisma.$disconnect();
+  await prisma.$connect();
+  logger.info('Database connections reset');
+}
+
+export { prisma, PlantStage, AchievementType, RewardType };

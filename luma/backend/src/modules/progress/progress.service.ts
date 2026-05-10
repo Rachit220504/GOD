@@ -1,6 +1,7 @@
 import { prisma } from '../../config/database';
 import { logger } from '../../config/logger';
 import { AppError } from '../../middleware/errorHandler';
+import { gamificationService } from '../gamification/gamification.service';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -33,6 +34,12 @@ export interface SessionSummary {
   finishedAt: Date | null;
 }
 
+export interface SkillProgress {
+  name: string;
+  percentage: number;
+  color: string;
+}
+
 export interface UserProgressStats {
   totalSessions: number;
   totalReadingSeconds: number;
@@ -47,6 +54,10 @@ export interface UserProgressStats {
   recentSessions: SessionSummary[];
   // Weekly breakdown (last 7 days)
   weeklyActivity: { date: string; minutes: number; wordsRead: number }[];
+  // Skill progress for reading development
+  skillProgress: SkillProgress[];
+  // Letters learned count
+  lettersLearned: number;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -118,6 +129,26 @@ export class ProgressService {
         ...(isCompleted && { booksCompleted: { increment: 1 } }),
       },
     });
+
+    // Award XP using new Gamification Engine with detailed breakdown
+    try {
+      const { gamificationEngine } = await import('../gamification/gamificationEngine.service');
+      const xpResult = await gamificationEngine.awardXPWithBreakdown(
+        userId,
+        session.id,
+        'reading_session'
+      );
+      
+      logger.info(
+        `Gamification XP awarded: user=${userId}, total=${xpResult.breakdown.totalXP}, ` +
+        `base=${xpResult.breakdown.baseXP}, accuracy=${xpResult.breakdown.accuracyBonus}, ` +
+        `streak=${xpResult.breakdown.streakBonus}, speed=${xpResult.breakdown.speedBonus}` +
+        `${xpResult.plantGrew ? `, PLANT GREW to ${xpResult.newStage}!` : ''}`
+      );
+    } catch (error) {
+      logger.warn('Failed to award gamification XP:', error);
+      // Don't fail the session if gamification fails
+    }
 
     // Update streak (if session happened today, increment; else reset if gap > 1 day)
     await this.updateStreak(userId);
@@ -257,6 +288,36 @@ export class ProgressService {
       finishedAt: s.finishedAt,
     }));
 
+    // Calculate skill progress based on reading metrics
+    const skillProgress: SkillProgress[] = [
+      {
+        name: 'Letter Recognition',
+        percentage: Math.min(100, Math.round((totalSessions > 0 ? 70 + (avgAccuracyPercent / 100) * 30 : 0))),
+        color: '#6C5CE7', // purple
+      },
+      {
+        name: 'Sound Blending',
+        percentage: Math.min(100, Math.round((totalSessions > 0 ? 50 + (avgWordsPerMinute / 150) * 50 : 0))),
+        color: '#00B894', // green
+      },
+      {
+        name: 'Syllable Awareness',
+        percentage: Math.min(100, Math.round((totalSessions > 0 ? 30 + (totalWordsRead / 1000) * 70 : 0))),
+        color: '#E84393', // pink
+      },
+      {
+        name: 'Reading Fluency',
+        percentage: Math.min(100, Math.round((totalSessions > 0 ? 40 + (avgCompletionPct / 100) * 60 : 0))),
+        color: '#E17055', // orange
+      },
+    ];
+
+    // Get letters learned from phonics progress
+    const phonicsProgressCount = await prisma.phonicsProgress.count({
+      where: { userId: targetUserId },
+    });
+    const lettersLearned = phonicsProgressCount;
+
     return {
       totalSessions,
       totalReadingSeconds,
@@ -270,6 +331,8 @@ export class ProgressService {
       totalPoints: profile?.totalPoints ?? 0,
       recentSessions,
       weeklyActivity,
+      skillProgress,
+      lettersLearned,
     };
   }
 
@@ -327,6 +390,99 @@ export class ProgressService {
       where: { userId },
       data: { currentStreak: newStreak, longestStreak: newLongest },
     });
+  }
+
+  /**
+   * Get weekly reading activity (Mon-Sun) for the day circles UI.
+   */
+  async getWeeklyActivity(
+    targetUserId: string,
+    requesterId: string,
+    requesterRole: string,
+  ): Promise<{ day: string; label: string; hasRead: boolean; isToday: boolean }[]> {
+    await this.assertAccess(targetUserId, requesterId, requesterRole);
+
+    const days = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+    const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayDay = today.getDay(); // 0 = Sunday
+
+    // Get sessions from the past 7 days
+    const sevenDaysAgo = new Date(today);
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+
+    const sessions = await prisma.sessionProgress.findMany({
+      where: {
+        userId: targetUserId,
+        startedAt: { gte: sevenDaysAgo },
+      },
+      select: { startedAt: true },
+    });
+
+    // Build day-by-day activity
+    const activity: { day: string; label: string; hasRead: boolean; isToday: boolean }[] = [];
+
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - (6 - i)); // Start from Monday of current week
+      d.setHours(0, 0, 0, 0);
+
+      const dayIndex = d.getDay();
+      const isToday = d.getTime() === today.getTime();
+
+      // Check if user read on this day
+      const hasRead = sessions.some((s) => {
+        const sDate = new Date(s.startedAt);
+        sDate.setHours(0, 0, 0, 0);
+        return sDate.getTime() === d.getTime();
+      });
+
+      activity.push({
+        day: days[dayIndex]!,
+        label: dayLabels[dayIndex]!,
+        hasRead,
+        isToday,
+      });
+    }
+
+    return activity;
+  }
+
+  /**
+   * Get the story to continue reading (most recent incomplete session).
+   */
+  async getContinueReading(
+    targetUserId: string,
+    requesterId: string,
+    requesterRole: string,
+  ): Promise<{
+    contentId: string;
+    title: string;
+    completionPct: number;
+    lastReadAt: Date;
+  } | null> {
+    await this.assertAccess(targetUserId, requesterId, requesterRole);
+
+    // Find most recent incomplete session (< 100% completion)
+    const incompleteSession = await prisma.sessionProgress.findFirst({
+      where: {
+        userId: targetUserId,
+        completionPct: { lt: 100 },
+      },
+      orderBy: { startedAt: 'desc' },
+      include: { content: { select: { title: true } } },
+    });
+
+    if (!incompleteSession) return null;
+
+    return {
+      contentId: incompleteSession.contentId,
+      title: incompleteSession.content.title,
+      completionPct: incompleteSession.completionPct,
+      lastReadAt: incompleteSession.startedAt,
+    };
   }
 
   private async assertAccess(

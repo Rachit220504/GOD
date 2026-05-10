@@ -13,7 +13,12 @@ import {
   SyllableEntry,
   ReadingLevel,
   LinkedChild,
+  DayActivity,
+  ContinueReadingStory,
+  PhonicsLesson,
+  PhonicsProgress,
 } from '../types';
+import { PHONICS_PRONUNCIATIONS } from '../constants/phonics';
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -251,6 +256,209 @@ export const progressApi = {
     limit?: number;
   }): Promise<ProgressStats> {
     const { data } = await api.get<ApiResponse<ProgressStats>>(`/progress/${userId}`, { params });
+    return data.data;
+  },
+
+  async getWeeklyActivity(userId: string): Promise<DayActivity[]> {
+    const { data } = await api.get<ApiResponse<DayActivity[]>>(`/progress/${userId}/weekly`);
+    return data.data;
+  },
+
+  async getContinueReading(userId: string): Promise<ContinueReadingStory | null> {
+    const { data } = await api.get<ApiResponse<ContinueReadingStory | null>>(`/progress/${userId}/continue-reading`);
+    return data.data;
+  },
+};
+
+// ─── Content with Progress API ────────────────────────────────────────────────
+
+export interface StoryWithProgress extends StoryListItem {
+  completionPct: number;
+}
+
+export const libraryApi = {
+  async getStoriesWithProgress(userId: string): Promise<StoryWithProgress[]> {
+    // Get all stories and user's progress, merge them (max 50 per API limit)
+    const [stories, progress] = await Promise.all([
+      contentApi.listStories({ limit: 50 }),
+      progressApi.getProgress(userId),
+    ]);
+
+    // Map stories with their completion percentage from sessions
+    return stories.items.map((story) => {
+      const session = progress.recentSessions.find((s) => s.contentId === story.id);
+      return {
+        ...story,
+        completionPct: session?.completionPct ?? 0,
+      };
+    });
+  },
+};
+
+// ─── Phonics API ──────────────────────────────────────────────────────────────
+
+// Generate phonics lessons from local pronunciation data
+const generatePhonicsLessons = (): PhonicsLesson[] => {
+  const colors = [
+    '#FFE5E5', '#E5F5FF', '#E5FFE5', '#FFF5E5', '#F5E5FF',
+    '#FFE5F5', '#E5FFF5', '#F5FFE5', '#FFE5CC', '#CCE5FF'
+  ];
+
+  return PHONICS_PRONUNCIATIONS.map((pronunciation, index) => ({
+    id: `phonics-${pronunciation.letter}`,
+    letter: pronunciation.letter,
+    sound: pronunciation.sound,
+    examples: generateExampleWords(pronunciation.letter),
+    wrongExamples: generateWrongExamples(pronunciation.letter),
+    colorTheme: colors[index % colors.length],
+    difficulty: 1,
+    order: index + 1,
+  }));
+};
+
+// Helper function to generate example words for each letter
+const generateExampleWords = (letter: string): string[] => {
+  const wordMap: Record<string, string[]> = {
+    'A': ['apple', 'ant', 'alligator'],
+    'B': ['ball', 'bear', 'banana'],
+    'C': ['cat', 'car', 'cake'],
+    'D': ['dog', 'duck', 'door'],
+    'E': ['elephant', 'egg', 'engine'],
+    'F': ['fish', 'frog', 'flower'],
+    'G': ['goat', 'girl', 'green'],
+    'H': ['hat', 'house', 'horse'],
+    'I': ['ice cream', 'igloo', 'insect'],
+    'J': ['juice', 'jump', 'jelly'],
+    'K': ['kite', 'king', 'kitten'],
+    'L': ['lion', 'lamp', 'leaf'],
+    'M': ['moon', 'mouse', 'milk'],
+    'N': ['nest', 'nose', 'net'],
+    'O': ['orange', 'octopus', 'ocean'],
+    'P': ['pencil', 'penguin', 'pizza'],
+    'Q': ['queen', 'quiet', 'question'],
+    'R': ['rabbit', 'rain', 'robot'],
+    'S': ['sun', 'snake', 'star'],
+    'T': ['tree', 'tiger', 'train'],
+    'U': ['umbrella', 'unicorn', 'up'],
+    'V': ['violin', 'vegetable', 'van'],
+    'W': ['water', 'window', 'whale'],
+    'X': ['x-ray', 'xylophone', 'box'],
+    'Y': ['yacht', 'yarn', 'yellow'],
+    'Z': ['zebra', 'zero', 'zoo'],
+  };
+  return wordMap[letter] || ['word1', 'word2', 'word3'];
+};
+
+// Helper function to generate wrong examples (distractors)
+const generateWrongExamples = (letter: string): string[] => {
+  const allDistractors = ['sun', 'moon', 'tree', 'car', 'house', 'book', 'ball', 'hat', 'shoe', 'cup'];
+  // Filter out words that might be examples for this letter
+  const examples = generateExampleWords(letter);
+  const filteredDistractors = allDistractors.filter(d => !examples.includes(d));
+  return filteredDistractors.slice(0, 3);
+};
+
+export const phonicsApi = {
+  async getLessons(): Promise<PhonicsLesson[]> {
+    // Return locally generated lessons instead of fetching from API
+    return generatePhonicsLessons();
+  },
+
+  async getMyProgress(): Promise<PhonicsProgress[]> {
+    // For now, return empty progress - in a real app this would come from storage/backend
+    return [];
+  },
+
+  async recordPractice(lessonId: string, correct: boolean): Promise<PhonicsProgress> {
+    // For now, return a mock progress object - in a real app this would save to backend
+    return {
+      id: `progress-${lessonId}`,
+      userId: 'current-user',
+      lessonId,
+      attempts: 1,
+      correctCount: correct ? 1 : 0,
+      masteryLevel: correct ? 10 : 0,
+      lastPracticedAt: new Date().toISOString(),
+    };
+  },
+};
+
+// ─── Gamification Types ─────────────────────────────────────────
+
+export interface GamificationData {
+  plant: {
+    currentStage: string;
+    currentXP: number;
+    totalXP: number;
+    level: number;
+    plantVariant?: string;
+    decorations: string[];
+    wordsRead: number;
+    sessionsCompleted: number;
+    progressToNext: number;
+    nextStage: string;
+  };
+  achievements: Array<{
+    id: string;
+    type: string;
+    name: string;
+    description: string;
+    icon: string;
+    rarity: string;
+    rewardType: string;
+    rewardValue: any;
+    isUnlocked: boolean;
+    unlockedAt?: Date;
+    progress?: number;
+  }>;
+  recentXP: Array<{
+    id: string;
+    xpEarned: number;
+    source: string;
+    sourceId?: string;
+    multiplier: number;
+    createdAt: Date;
+  }>;
+  dailyGoal: {
+    id: string;
+    date: Date;
+    targetMinutes: number;
+    targetWords: number;
+    minutesRead: number;
+    wordsRead: number;
+    sessionsCompleted: number;
+    isCompleted: boolean;
+    progressPercent: number;
+  } | null;
+  totalUnlocked: number;
+  nextMilestone: {
+    type: string;
+    value: number;
+    reward: string;
+    progress: number;
+  } | null;
+}
+
+// ─── Gamification API ────────────────────────────────────────────
+
+export const gamificationApi = {
+  async getProgress(): Promise<GamificationData> {
+    const { data } = await api.get<ApiResponse<GamificationData>>('/gamification/progress');
+    return data.data;
+  },
+
+  async getAchievements(): Promise<GamificationData['achievements']> {
+    const { data } = await api.get<ApiResponse<GamificationData['achievements']>>('/gamification/achievements');
+    return data.data;
+  },
+
+  async getXPHistory(limit = 20): Promise<GamificationData['recentXP']> {
+    const { data } = await api.get<ApiResponse<GamificationData['recentXP']>>(`/gamification/history?limit=${limit}`);
+    return data.data;
+  },
+
+  async claimMilestone(milestoneId: string): Promise<{ success: boolean; message: string }> {
+    const { data } = await api.post<ApiResponse<{ success: boolean; message: string }>>(`/gamification/claim/${milestoneId}`);
     return data.data;
   },
 };

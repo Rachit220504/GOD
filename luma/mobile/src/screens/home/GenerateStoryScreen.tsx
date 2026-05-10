@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, TextInput,
 } from 'react-native';
@@ -27,7 +27,21 @@ const TOPIC_SUGGESTIONS = [
   '🏔️ Mountain explorer', '🎵 Music and magic',
 ];
 
-const WORD_COUNT_OPTIONS = [80, 120, 180, 250];
+// Dynamic word count options based on reading level
+const getWordCountOptions = (level: ReadingLevel): number[] => {
+  switch (level) {
+    case 'BEGINNER':
+      return [50, 75, 100, 125]; // Shorter stories for beginners
+    case 'ELEMENTARY':
+      return [80, 120, 160, 200]; // Medium length for elementary
+    case 'INTERMEDIATE':
+      return [120, 180, 240, 300]; // Longer stories for intermediate
+    case 'ADVANCED':
+      return [180, 250, 350, 450]; // Longest stories for advanced
+    default:
+      return [80, 120, 180, 250]; // Fallback
+  }
+};
 
 export function GenerateStoryScreen({ navigation }: Props) {
   const { user } = useAuth();
@@ -35,9 +49,23 @@ export function GenerateStoryScreen({ navigation }: Props) {
   const [level, setLevel] = useState<ReadingLevel>(
     (user?.readingLevel as ReadingLevel) ?? 'ELEMENTARY',
   );
-  const [maxWords, setMaxWords] = useState(120);
+  const [maxWords, setMaxWords] = useState(() => {
+  const userLevel = (user?.readingLevel as ReadingLevel) ?? 'ELEMENTARY';
+  const options = getWordCountOptions(userLevel);
+  return options[1]; // Default to second option (medium length)
+});
   const [isGenerating, setIsGenerating] = useState(false);
   const [topicError, setTopicError] = useState('');
+
+  // Update maxWords when level changes
+  useEffect(() => {
+    const options = getWordCountOptions(level);
+    const currentOptionIndex = options.indexOf(maxWords);
+    if (currentOptionIndex === -1) {
+      // If current maxWords is not in the new options, set to second option
+      setMaxWords(options[1]);
+    }
+  }, [level, maxWords]);
 
   const handleGenerate = async () => {
     if (!topic.trim() || topic.trim().length < 2) {
@@ -47,22 +75,42 @@ export function GenerateStoryScreen({ navigation }: Props) {
     setTopicError('');
     setIsGenerating(true);
 
-    try {
-      const story = await contentApi.generateStory({
-        topic: topic.trim(),
-        readingLevel: level,
-        ageGroup: user?.readingLevel === 'BEGINNER' ? '5-7' : '7-10',
-        maxWords,
-      });
+    let lastError: Error | null = null;
+    const maxRetries = 3;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`Generating story attempt ${attempt}/${maxRetries} with topic:`, topic.trim());
+        const story = await contentApi.generateStory({
+          topic: topic.trim(),
+          readingLevel: level,
+          ageGroup: user?.readingLevel === 'BEGINNER' ? '5-7' : '7-10',
+          maxWords,
+        });
+        console.log('Story generated successfully, ID:', story.id);
 
-      // Navigate directly to reading mode
-      navigation.replace('ReadingMode', { storyId: story.id });
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Story generation failed. Please try again.';
-      Alert.alert('Generation Failed', msg);
-    } finally {
-      setIsGenerating(false);
+        // Navigate to reading mode with the new story
+        // @ts-ignore - navigation typing issue
+        navigation.navigate('ReadingMode', { storyId: story.id });
+        console.log('Navigation called to ReadingMode with storyId:', story.id);
+        return; // Success, exit the function
+      } catch (err: unknown) {
+        lastError = err instanceof Error ? err : new Error('Story generation failed');
+        console.error(`Attempt ${attempt} failed:`, lastError.message);
+        
+        // If this is not the last attempt, wait a bit before retrying
+        if (attempt < maxRetries) {
+          // Exponential backoff: 1s, 2s, 4s
+          const delay = Math.pow(2, attempt - 1) * 1000;
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
     }
+
+    // All attempts failed
+    const msg = lastError?.message || 'Story generation failed. Please try again.';
+    Alert.alert('Generation Failed', `Failed to generate story after ${maxRetries} attempts. ${msg}`);
+    setIsGenerating(false);
   };
 
   return (
@@ -138,7 +186,7 @@ export function GenerateStoryScreen({ navigation }: Props) {
       {/* Word count */}
       <Text style={[styles.sectionLabel, { marginTop: Spacing.xl }]}>Story Length</Text>
       <View style={styles.wordCountRow}>
-        {WORD_COUNT_OPTIONS.map((w) => (
+        {getWordCountOptions(level).map((w) => (
           <TouchableOpacity
             key={w}
             style={[styles.wordChip, maxWords === w && styles.wordChipSelected]}

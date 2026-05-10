@@ -1,8 +1,8 @@
 import React, { useState, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert,
 } from 'react-native';
-import { Colors, FontSize, Spacing, BorderRadius, Shadow } from '../../constants/theme';
+import { Colors, FontSize, Spacing, BorderRadius } from '../../constants/theme';
 import { SafeScreen } from '../../components/common/SafeScreen';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -16,7 +16,14 @@ const BG_PRESETS = [
   { color: '#F3F0FF', label: 'Lavender' },
   { color: '#F0FFF4', label: 'Mint' },
 ];
-const FONT_PRESETS = ['Lexend', 'OpenDyslexic', 'Arial', 'Verdana'];
+const FONT_PRESETS = [
+  { name: 'Lexend', family: 'Lexend' },
+  { name: 'System', family: 'System' },
+  { name: 'Sans-serif', family: 'Roboto_400Regular' },
+  { name: 'Serif', family: 'Roboto_700Bold' },
+  { name: 'OpenDyslexic', family: 'OpenDyslexic' },
+  { name: 'Dyslexie', family: 'OpenDyslexicBold' },
+];
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -134,6 +141,7 @@ export function SettingsScreen() {
               fontSize: comfort.fontSize,
               letterSpacing: comfort.fontSize * comfort.letterSpacing,
               lineHeight: comfort.fontSize * comfort.lineHeight,
+              fontFamily: comfort.fontFamily,
             }]}>
               The sun was bright and warm. Birds sang in the big oak tree.
             </Text>
@@ -167,14 +175,20 @@ export function SettingsScreen() {
         {/* Font family */}
         <Text style={s.sectionTitle}>🔤 Font Family</Text>
         <Card variant="elevated" style={s.section}>
+          <View style={s.currentFontDisplay}>
+            <Text style={s.currentFontLabel}>Current: </Text>
+            <Text style={[s.currentFontValue, { fontFamily: comfort.fontFamily }]}>
+              {FONT_PRESETS.find(f => f.family === comfort.fontFamily)?.name || comfort.fontFamily}
+            </Text>
+          </View>
           <View style={s.fontRow}>
-            {FONT_PRESETS.map((f) => (
+            {FONT_PRESETS.map((font) => (
               <TouchableOpacity
-                key={f}
-                style={[s.fontChip, comfort.fontFamily === f && s.fontChipSelected]}
-                onPress={() => comfort.updateFontFamily(f)}
+                key={font.name}
+                style={[s.fontChip, comfort.fontFamily === font.family && s.fontChipSelected]}
+                onPress={() => comfort.updateFontFamily(font.family)}
               >
-                <Text style={[s.fontChipText, comfort.fontFamily === f && s.fontChipTextSelected]}>{f}</Text>
+                <Text style={[s.fontChipText, comfort.fontFamily === font.family && s.fontChipTextSelected, { fontFamily: font.family }]}>{font.name}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -229,5 +243,8 @@ const s = StyleSheet.create({
   fontChipSelected: { borderColor: Colors.purple, backgroundColor: Colors.lavender },
   fontChipText: { fontSize: FontSize.sm, fontWeight: '600', color: Colors.textSecondary },
   fontChipTextSelected: { color: Colors.purple },
+  currentFontDisplay: { flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.md, padding: Spacing.md, backgroundColor: Colors.lavender, borderRadius: BorderRadius.lg },
+  currentFontLabel: { fontSize: FontSize.md, fontWeight: '600', color: Colors.textSecondary },
+  currentFontValue: { fontSize: FontSize.lg, fontWeight: '700', color: Colors.purple },
   actionRow: { gap: Spacing.sm, marginBottom: Spacing.md },
 });

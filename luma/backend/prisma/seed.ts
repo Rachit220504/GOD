@@ -94,7 +94,12 @@ async function main(): Promise<void> {
 
   // ─── Link child to parent ───────────────────────────────────────────────────
   await prisma.childProfile.upsert({
-    where: { childId: child.id },
+    where: {
+      childId_parentId: {
+        childId: child.id,
+        parentId: parent.id,
+      },
+    },
     update: {},
     create: { childId: child.id, parentId: parent.id },
   });

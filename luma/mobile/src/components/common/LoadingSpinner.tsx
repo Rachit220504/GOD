@@ -15,7 +15,7 @@ export function LoadingSpinner({
 }: LoadingSpinnerProps) {
   return (
     <View style={[styles.container, fullScreen && styles.fullScreen]}>
-      <ActivityIndicator size="large" color={color} />
+      <ActivityIndicator size="large" color={color} style={styles.spinner} />
       {message && <Text style={styles.message}>{message}</Text>}
     </View>
   );
@@ -26,7 +26,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
-    gap: 12,
+  },
+  spinner: {
+    marginBottom: 12,
   },
   fullScreen: {
     flex: 1,

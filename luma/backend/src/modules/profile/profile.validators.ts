@@ -41,8 +41,8 @@ export const updateProfileValidators = [
 
   body('fontFamily')
     .optional()
-    .isIn(['Lexend', 'OpenDyslexic', 'Arial', 'Verdana'])
-    .withMessage('fontFamily must be one of: Lexend, OpenDyslexic, Arial, Verdana'),
+    .isIn(['Lexend', 'OpenDyslexic', 'OpenDyslexicBold', 'System', 'Roboto_400Regular', 'Roboto_700Bold', 'Arial', 'Verdana'])
+    .withMessage('fontFamily must be one of: Lexend, OpenDyslexic, OpenDyslexicBold, System, Roboto_400Regular, Roboto_700Bold, Arial, Verdana'),
 
   body('avatarUrl')
     .optional()

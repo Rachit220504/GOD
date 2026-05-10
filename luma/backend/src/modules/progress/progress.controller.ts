@@ -38,6 +38,42 @@ export class ProgressController {
       next(error);
     }
   }
+
+  /**
+   * GET /api/progress/:userId/weekly
+   * Get weekly reading activity (Mon-Sun) for day circles UI.
+   */
+  async getWeeklyActivity(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = String(req.params['userId']);
+      const activity = await progressService.getWeeklyActivity(
+        userId,
+        req.user!.id,
+        req.user!.role,
+      );
+      res.status(200).json({ success: true, data: activity });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /api/progress/:userId/continue-reading
+   * Get the story to continue reading (most recent incomplete session).
+   */
+  async getContinueReading(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = String(req.params['userId']);
+      const story = await progressService.getContinueReading(
+        userId,
+        req.user!.id,
+        req.user!.role,
+      );
+      res.status(200).json({ success: true, data: story });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export const progressController = new ProgressController();

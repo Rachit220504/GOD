@@ -36,6 +36,37 @@ enum ContentStatus {
   ARCHIVED
 }
 
+// ─── Gamification Enums ──────────────────────────────────────────────────────
+
+enum PlantStage {
+  SEED            // 0-100 XP
+  SPROUT          // 100-300 XP  
+  LEAVES          // 300-600 XP
+  BUD             // 600-1200 XP
+  FLOWER          // 1200-2500 XP
+  BLOOM           // 2500-5000 XP
+  RAINBOW         // 5000-10000 XP (special)
+  GOLDEN          // 10000+ XP (legendary)
+}
+
+enum AchievementType {
+  FIRST_STORY         // Complete first story
+  STREAK_WARRIOR     // 7-day streak
+  SPEED_READER        // High WPM achievement
+  ACCURACY_MASTER    // 95%+ accuracy
+  BOOK_WORM          // 10 books completed
+  PHONICS_EXPERT     // Complete all phonics lessons
+  CREATIVITY_BONUS   // Generate 5 stories
+  CONSISTENCY_HERO   // Read 30 days in month
+}
+
+enum RewardType {
+  PLANT_VARIANT      // Special plant appearance
+  BADGE            // Achievement badge
+  TITLE             // Display title
+  CUSTOMIZATION     // Plant decoration
+}
+
 // ─── User ─────────────────────────────────────────────────────────────────────
 
 model User {
@@ -55,6 +86,12 @@ model User {
   generatedContent GeneratedContent[]
   childProfiles    ChildProfile[]     @relation("ParentChildren")
   parentLinks      ChildProfile[]     @relation("ChildParent")
+  phonicsProgress  PhonicsProgress[]
+  plantProgress   PlantProgress?
+  achievements    UserAchievement[]
+  xpHistory      XPHistory[]
+  dailyGoals     DailyGoal[]
+  rewardMilestones RewardMilestone[]
 
   @@map("users")
 }
@@ -132,6 +169,45 @@ model GeneratedContent {
   @@map("generated_content")
 }
 
+// ─── Phonics Practice ─────────────────────────────────────────────────────────
+
+model PhonicsLesson {
+  id            String   @id @default(uuid())
+  letter        String   @unique // e.g. "A", "B"
+  sound         String   // e.g. "/æ/", "/b/"
+  examples      String[] // e.g. ["apple", "ant", "ax"] - correct words
+  wrongExamples String[] // e.g. ["cat", "dog"] - distractors for word game
+  colorTheme    String   @default("#E8E0FF") // pastel color for card
+  difficulty    Int      @default(1) // 1=beginner, 2=intermediate
+  order         Int      @default(0) // display order
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Track user progress on this phonics lesson
+  userProgress PhonicsProgress[]
+  
+  @@map("phonics_lessons")
+}
+
+model PhonicsProgress {
+  id          String   @id @default(uuid())
+  userId      String
+  lessonId    String
+  
+  // Progress tracking
+  attempts    Int      @default(0)
+  correctCount Int    @default(0)
+  masteryLevel Float   @default(0) // 0-100
+  lastPracticedAt DateTime @default(now())
+  
+  user   User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson PhonicsLesson  @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, lessonId])
+  @@map("phonics_progress")
+}
+
 // ─── Session Progress ─────────────────────────────────────────────────────────
 
 model SessionProgress {
@@ -160,4 +236,132 @@ model SessionProgress {
   content GeneratedContent @relation(fields: [contentId], references: [id])
 
   @@map("session_progress")
+}
+
+// ─── Gamification Models ────────────────────────────────────────────
+
+model PlantProgress {
+  id              String     @id @default(uuid())
+  userId          String     @unique
+  
+  // Current plant state
+  currentStage    PlantStage @default(SEED)
+  currentXP      Int        @default(0)
+  totalXP        Int        @default(0)
+  level           Int        @default(1)
+  
+  // Visual customization
+  plantVariant    String?    // "rainbow", "golden", "crystal", etc.
+  decorations     String[]   // ["star", "ribbon", "sparkle"]
+  
+  // Growth tracking
+  wordsRead       Int        @default(0)
+  sessionsCompleted Int        @default(0)
+  lastGrowthAt    DateTime?  // When plant last evolved
+  
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("plant_progress")
+}
+
+model Achievement {
+  id              String           @id @default(uuid())
+  type            AchievementType
+  name            String           // "Speed Reader", "Streak Warrior"
+  description     String           // "Read 100+ WPM in a session"
+  icon            String           // emoji or icon name
+  rarity          String           @default("common") // common, rare, epic, legendary
+  
+  // Unlock conditions (configurable)
+  requiredXP      Int?             // XP threshold
+  requiredStreak  Int?             // Streak requirement
+  requiredBooks   Int?             // Books completed
+  requiredWPM     Int?             // Words per minute
+  requiredAccuracy Float?           // Accuracy percentage
+  
+  // Rewards
+  rewardType      RewardType
+  rewardValue     Json             // Flexible reward data
+  
+  isActive        Boolean          @default(true)
+  createdAt       DateTime         @default(now())
+  
+  // Track which users unlocked this
+  userAchievements UserAchievement[]
+  
+  @@map("achievements")
+}
+
+model UserAchievement {
+  id             String       @id @default(uuid())
+  userId         String
+  achievementId  String
+  unlockedAt     DateTime     @default(now())
+  progressData   Json?        // For multi-step achievements
+  
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement    Achievement  @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, achievementId])
+  @@map("user_achievements")
+}
+
+model XPHistory {
+  id              String       @id @default(uuid())
+  userId          String
+  xpEarned        Int
+  source          String       // "reading_session", "streak_bonus", "achievement", "phonics"
+  sourceId        String?      // Related entity ID
+  multiplier      Float        @default(1.0) // Streak multipliers
+  
+  createdAt       DateTime     @default(now())
+  
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("xp_history")
+}
+
+model DailyGoal {
+  id              String       @id @default(uuid())
+  userId          String
+  date            DateTime
+  
+  // Goal configuration
+  targetMinutes   Int          @default(15) // Daily reading goal
+  targetWords    Int          @default(100)
+  
+  // Progress tracking
+  minutesRead    Int          @default(0)
+  wordsRead      Int          @default(0)
+  sessionsCompleted Int          @default(0)
+  isCompleted    Boolean      @default(false)
+  streakBonusApplied Boolean     @default(false)
+  
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, date])
+  @@map("daily_goals")
+}
+
+model RewardMilestone {
+  id              String       @id @default(uuid())
+  userId          String
+  milestoneType   String       // "plant_growth", "streak", "total_words"
+  milestoneValue  Int          // The value that triggered this
+  rewardType      RewardType
+  rewardData      Json         // Specific reward info
+  isClaimed       Boolean      @default(false)
+  claimedAt       DateTime?
+  
+  createdAt       DateTime     @default(now())
+  
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("reward_milestones")
 }

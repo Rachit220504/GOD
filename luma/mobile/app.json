@@ -34,6 +34,10 @@
     "plugins": [
       "expo-font",
       "expo-secure-store"
+    ],
+    "fonts": [
+      "./assets/fonts/OpenDyslexic-Regular.ttf",
+      "./assets/fonts/OpenDyslexic-Bold.ttf"
     ]
   }
 }

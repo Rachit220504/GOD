@@ -119,9 +119,18 @@ export class ContentService {
       logger.info('Story generated using AI');
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : String(err);
-      // If AI is unavailable (503/404), use mock fallback
-      if (errorMsg.includes('503') || errorMsg.includes('404') || errorMsg.includes('high demand') || errorMsg.includes('exhausted') || errorMsg.includes('not found')) {
-        logger.warn('AI service unavailable, using mock story fallback');
+      // If AI is unavailable or returns invalid data, use mock fallback
+      const isServiceError = errorMsg.includes('503') ||
+                            errorMsg.includes('404') ||
+                            errorMsg.includes('high demand') ||
+                            errorMsg.includes('exhausted') ||
+                            errorMsg.includes('not found') ||
+                            errorMsg.includes('Invalid JSON') ||
+                            errorMsg.includes('Parse error') ||
+                            errorMsg.includes('malformed');
+
+      if (isServiceError) {
+        logger.warn(`AI service error (${errorMsg.substring(0, 100)}), using mock story fallback`);
         story = generateMockStory(options);
       } else {
         throw err;

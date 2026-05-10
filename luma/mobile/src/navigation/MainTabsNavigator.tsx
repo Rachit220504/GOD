@@ -1,17 +1,19 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { MainTabParamList, HomeStackParamList } from '../types';
-import { Colors, FontSize, Spacing, Shadow } from '../constants/theme';
+import { Colors, Spacing, Shadow } from '../constants/theme';
 import { TAB_BAR_HEIGHT } from '../utils/responsive';
 
 // Screens
 import { HomeScreen } from '../screens/home/HomeScreen';
-import { ProgressScreen } from '../screens/progress/ProgressScreen';
+import { ProgressNavigator } from './ProgressNavigator';
 import { SettingsScreen } from '../screens/settings/SettingsScreen';
+import { PhonicsPracticeScreen } from '../screens/phonics/PhonicsPracticeScreen';
 import { StoryDetailScreen } from '../screens/home/StoryDetailScreen';
 import { ReadingModeScreen } from '../screens/reading/ReadingModeScreen';
+import { ReadingHubScreen } from '../screens/reading/ReadingHubScreen';
 import { GenerateStoryScreen } from '../screens/home/GenerateStoryScreen';
 import { ParentDashboardScreen } from '../screens/parent/ParentDashboardScreen';
 import { LinkChildScreen } from '../screens/parent/LinkChildScreen';
@@ -22,14 +24,24 @@ function TabIcon({
   emoji,
   label,
   focused,
+  image,
+  customImage, // Renamed to avoid conflicts
 }: {
   emoji: string;
   label: string;
   focused: boolean;
+  image?: any;
+  customImage?: any; // New prop for custom images
 }) {
   return (
-    <View style={[styles.tabItem, focused && styles.tabItemFocused]}>
-      <Text style={styles.tabEmoji}>{emoji}</Text>
+    <View style={styles.tabItem}>
+      {customImage ? (
+        <Image source={customImage} style={styles.tabImage} />
+      ) : image ? (
+        <Image source={image} style={styles.tabImage} />
+      ) : (
+        <Text style={styles.tabEmoji}>{emoji}</Text>
+      )}
       <Text style={[styles.tabLabel, focused && styles.tabLabelFocused]}>{label}</Text>
     </View>
   );
@@ -57,14 +69,16 @@ function HomeStackNavigator() {
   );
 }
 
-// Standalone stack so ReadingModeScreen (typed for NativeStack) can be used
-// as a tab without prop-type conflicts.
+// Reading Stack - Hub for browsing stories and reading
 const ReadingStack = createNativeStackNavigator<HomeStackParamList>();
 
 function ReadingStackNavigator() {
   return (
     <ReadingStack.Navigator screenOptions={{ headerShown: false }}>
-      <ReadingStack.Screen name="ReadingMode" component={ReadingModeScreen} />
+      {/* Reading hub is the entry point - shown as "HomeScreen" in this stack's context */}
+      <ReadingStack.Screen name="ReadingMode" component={ReadingHubScreen} />
+      <ReadingStack.Screen name="StoryDetail" component={StoryDetailScreen} />
+      <ReadingStack.Screen name="GenerateStory" component={GenerateStoryScreen} />
     </ReadingStack.Navigator>
   );
 }
@@ -87,18 +101,21 @@ export function MainTabsNavigator() {
         component={HomeStackNavigator}
         options={{
           tabBarButton: (props) => (
-            <TouchableOpacity
-              {...props}
-              accessibilityRole="tab"
-              accessibilityLabel="Home"
-              style={styles.tabTouchable}
-            >
-              <TabIcon
-                emoji="🏠"
-                label="Home"
-                focused={props.accessibilityState?.selected ?? false}
-              />
-            </TouchableOpacity>
+            <View style={styles.tabTouchable}>
+              <TouchableOpacity
+                {...props}
+                accessibilityRole="tab"
+                accessibilityLabel="Home"
+              >
+                <TabIcon
+                  emoji="🏠"
+                  label="Home"
+                  focused={props.accessibilityState?.selected ?? false}
+                  image={require('../../assets/home-icon.png')}
+                  customImage={props.accessibilityState?.selected ? require('../../assets/home-icon-blue.png') : require('../../assets/home-icon.png')}
+                />
+              </TouchableOpacity>
+            </View>
           ),
         }}
       />
@@ -107,38 +124,67 @@ export function MainTabsNavigator() {
         component={ReadingStackNavigator}
         options={{
           tabBarButton: (props) => (
-            <TouchableOpacity
-              {...props}
-              accessibilityRole="tab"
-              accessibilityLabel="Reading"
-              style={styles.tabTouchable}
-            >
-              <TabIcon
-                emoji="📖"
-                label="Read"
-                focused={props.accessibilityState?.selected ?? false}
-              />
-            </TouchableOpacity>
+            <View style={styles.tabTouchable}>
+              <TouchableOpacity
+                {...props}
+                accessibilityRole="tab"
+                accessibilityLabel="Read"
+              >
+                <TabIcon
+                  emoji="🏠"
+                  label="Read"
+                  focused={props.accessibilityState?.selected ?? false}
+                  image={require('../../assets/read-icon.png')}
+                  customImage={props.accessibilityState?.selected ? require('../../assets/read-icon-blue.png') : require('../../assets/read-icon.png')}
+                />
+              </TouchableOpacity>
+            </View>
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Phonics"
+        component={PhonicsPracticeScreen}
+        options={{
+          tabBarButton: (props) => (
+            <View style={styles.tabTouchable}>
+              <TouchableOpacity
+                {...props}
+                accessibilityRole="tab"
+                accessibilityLabel="Phonics"
+              >
+                <TabIcon
+                  emoji="🏠"
+                  label="Phonics"
+                  focused={props.accessibilityState?.selected ?? false}
+                  image={require('../../assets/phonics-icon.png')}
+                  customImage={props.accessibilityState?.selected ? require('../../assets/phonics-icon-blue.png') : require('../../assets/phonics-icon.png')}
+                />
+              </TouchableOpacity>
+            </View>
           ),
         }}
       />
       <Tab.Screen
         name="Progress"
-        component={ProgressScreen}
+        component={ProgressNavigator}
         options={{
           tabBarButton: (props) => (
-            <TouchableOpacity
-              {...props}
-              accessibilityRole="tab"
-              accessibilityLabel="Progress"
-              style={styles.tabTouchable}
-            >
-              <TabIcon
-                emoji="📊"
-                label="Progress"
-                focused={props.accessibilityState?.selected ?? false}
-              />
-            </TouchableOpacity>
+            <View style={styles.tabTouchable}>
+              <TouchableOpacity
+                {...props}
+                accessibilityRole="tab"
+                accessibilityLabel="Progress"
+              >
+                <TabIcon
+                  emoji="🏠"
+                  label="Progress"
+                  focused={props.accessibilityState?.selected ?? false}
+                  image={require('../../assets/progress-icon.png')}
+                  customImage={props.accessibilityState?.selected ? require('../../assets/progress-icon-blue.png') : require('../../assets/progress-icon.png')}
+                />
+              </TouchableOpacity>
+            </View>
           ),
         }}
       />
@@ -147,18 +193,21 @@ export function MainTabsNavigator() {
         component={SettingsScreen}
         options={{
           tabBarButton: (props) => (
-            <TouchableOpacity
-              {...props}
-              accessibilityRole="tab"
-              accessibilityLabel="Settings"
-              style={styles.tabTouchable}
-            >
-              <TabIcon
-                emoji="⚙️"
-                label="Settings"
-                focused={props.accessibilityState?.selected ?? false}
-              />
-            </TouchableOpacity>
+            <View style={styles.tabTouchable}>
+              <TouchableOpacity
+                {...props}
+                accessibilityRole="tab"
+                accessibilityLabel="Settings"
+              >
+                <TabIcon
+                  emoji="🏠"
+                  label="Settings"
+                  focused={props.accessibilityState?.selected ?? false}
+                  image={require('../../assets/settings-icon.png')}
+                  customImage={props.accessibilityState?.selected ? require('../../assets/settings-icon-blue.png') : require('../../assets/settings-icon.png')}
+                />
+              </TouchableOpacity>
+            </View>
           ),
         }}
       />
@@ -187,10 +236,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     minWidth: 56,
   },
-  tabItemFocused: {
-    backgroundColor: Colors.lavender,
-  },
-  tabEmoji: { fontSize: 22 },
+    tabEmoji: { fontSize: 22 },
   tabLabel: {
     fontSize: 10,
     fontWeight: '600',
@@ -199,5 +245,10 @@ const styles = StyleSheet.create({
   },
   tabLabelFocused: {
     color: Colors.purple,
+  },
+  tabImage: {
+    width: 24,
+    height: 24,
+    resizeMode: 'contain',
   },
 });

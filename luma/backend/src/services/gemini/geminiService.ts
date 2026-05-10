@@ -143,13 +143,40 @@ For 1-syllable words, still include them if they might be challenging for a youn
         const text = response.text();
 
         // Strip any accidental markdown fences Gemini might add
-        const cleanJson = text.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
-        const parsed = JSON.parse(cleanJson) as {
-          title: string;
-          body: string;
-          tags: string[];
-          syllableMap: SyllableEntry[];
-        };
+        let cleanJson = text.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
+
+        // Attempt to fix common JSON issues from Gemini
+        // 1. Fix unterminated strings by trying to close them
+        const openQuotes = (cleanJson.match(/"(?:(?!["\\]).|\\.)*$/g) || []).length;
+        if (openQuotes > 0) {
+          logger.warn(`Detected ${openQuotes} unterminated string(s), attempting to fix...`);
+          // Try to close the last string by adding quote and closing braces
+          cleanJson = cleanJson.replace(/,(\s*)$/, ''); // Remove trailing comma
+          cleanJson = cleanJson.replace(/"(?:(?!["\\]).|\\.)*$/, '"'); // Close last string
+          // Add missing closing braces/brackets if needed
+          const openBraces = (cleanJson.match(/\{/g) || []).length;
+          const closeBraces = (cleanJson.match(/\}/g) || []).length;
+          const openBrackets = (cleanJson.match(/\[/g) || []).length;
+          const closeBrackets = (cleanJson.match(/\]/g) || []).length;
+          cleanJson += '}'.repeat(Math.max(0, openBraces - closeBraces));
+          cleanJson += ']'.repeat(Math.max(0, openBrackets - closeBrackets));
+        }
+
+        let parsed: { title: string; body: string; tags: string[]; syllableMap: SyllableEntry[] };
+        try {
+          parsed = JSON.parse(cleanJson);
+        } catch (parseError) {
+          logger.error('Failed to parse Gemini response (will retry):', text.substring(0, 200));
+          lastError = new Error(`Invalid JSON: ${parseError instanceof Error ? parseError.message : 'Parse error'}`);
+          // Treat as retryable error - continue to next attempt
+          if (attempt < maxRetries) {
+            const delay = attempt * 1500;
+            logger.warn(`JSON parse error, retrying in ${delay}ms (attempt ${attempt}/${maxRetries})`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            continue;
+          }
+          throw lastError;
+        }
 
         if (!parsed.title || !parsed.body || !Array.isArray(parsed.syllableMap)) {
           throw new Error('Gemini returned malformed story JSON structure');
@@ -176,16 +203,21 @@ For 1-syllable words, still include them if they might be challenging for a youn
         return story;
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
-        const is503 = lastError.message.includes('503') || lastError.message.includes('high demand');
+        const isRetryable = lastError.message.includes('503') ||
+                           lastError.message.includes('high demand') ||
+                           lastError.message.includes('Invalid JSON') ||
+                           lastError.message.includes('Parse error') ||
+                           lastError.message.includes('timeout') ||
+                           lastError.message.includes('network');
 
-        if (is503 && attempt < maxRetries) {
-          const delay = attempt * 1000; // 1s, 2s, 3s
-          logger.warn(`Gemini 503 error, retrying in ${delay}ms (attempt ${attempt}/${maxRetries})`);
+        if (isRetryable && attempt < maxRetries) {
+          const delay = attempt * 1500; // 1.5s, 3s, 4.5s
+          logger.warn(`Retryable error (${lastError.message.substring(0, 50)}...), retrying in ${delay}ms (attempt ${attempt}/${maxRetries})`);
           await new Promise(resolve => setTimeout(resolve, delay));
           continue;
         }
 
-        // Not a 503 or exhausted retries
+        // Not retryable or exhausted retries
         logger.error('Gemini story generation failed:', error);
         throw new Error(
           `Story generation failed: ${lastError.message}`,

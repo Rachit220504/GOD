@@ -100,6 +100,23 @@ export interface PaginatedStories {
   totalPages: number;
 }
 
+// ─── Weekly Activity (for Home Screen circles) ────────────────────────────────
+
+export interface DayActivity {
+  day: string; // 'M', 'T', 'W', 'T', 'F', 'S', 'S'
+  label: string; // 'Mon', 'Tue', etc.
+  hasRead: boolean;
+  isToday: boolean;
+}
+
+export interface ContinueReadingStory {
+  contentId: string;
+  title: string;
+  readingLevel: ReadingLevel;
+  completionPct: number;
+  lastReadAt: string;
+}
+
 // ─── Progress ─────────────────────────────────────────────────────────────────
 
 export interface SessionRecord {
@@ -122,6 +139,12 @@ export interface WeeklyActivity {
   wordsRead: number;
 }
 
+export interface SkillProgress {
+  name: string;
+  percentage: number;
+  color: string;
+}
+
 export interface ProgressStats {
   totalSessions: number;
   totalReadingSeconds: number;
@@ -135,6 +158,8 @@ export interface ProgressStats {
   totalPoints: number;
   recentSessions: SessionSummary[];
   weeklyActivity: WeeklyActivity[];
+  skillProgress: SkillProgress[];
+  lettersLearned: number;
 }
 
 export interface SessionSummary {
@@ -189,6 +214,7 @@ export type OnboardingStackParamList = {
 export type MainTabParamList = {
   Home: undefined;
   Reading: { storyId?: string };
+  Phonics: undefined;
   Progress: undefined;
   Settings: undefined;
 };
@@ -200,4 +226,28 @@ export type HomeStackParamList = {
   GenerateStory: undefined;
   ParentDashboard: undefined;
   LinkChild: undefined;
+  Phonics: undefined;
 };
+
+// ─── Phonics ──────────────────────────────────────────────────────────────────
+
+export interface PhonicsLesson {
+  id: string;
+  letter: string;
+  sound: string;
+  examples: string[]; // Correct words that start with the letter sound
+  wrongExamples: string[]; // Distractor words for word selection game
+  colorTheme: string;
+  difficulty: number;
+  order: number;
+}
+
+export interface PhonicsProgress {
+  id: string;
+  userId: string;
+  lessonId: string;
+  attempts: number;
+  correctCount: number;
+  masteryLevel: number;
+  lastPracticedAt: string;
+}

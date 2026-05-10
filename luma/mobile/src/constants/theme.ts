@@ -39,7 +39,8 @@ export const Colors = {
   border: '#DFE6E9',
   borderFocus: '#6C5CE7',
   overlay: 'rgba(45, 52, 54, 0.5)',
-  white: '#FFFFFF',
+  white: '#ffffff',
+  black: '#00000000',
   shadow: 'rgba(108, 92, 231, 0.15)',
 } as const;
 
@@ -47,7 +48,9 @@ export const FontFamily = {
   lexend: 'Lexend',
   lexendBold: 'Lexend-Bold',
   lexendSemiBold: 'Lexend-SemiBold',
-  openDyslexic: 'OpenDyslexic',
+  system: 'System',
+  sansSerif: 'sans-serif',
+  serif: 'serif',
 } as const;
 
 export const FontSize = {
