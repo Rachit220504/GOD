@@ -270,7 +270,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.purpleLight,
   },
   cardWrapper: {
-    width: '48%', // 48% for 2-column layout with gap
+    flex: 1, // Equal distribution in 2x2x2 matrix
     padding: Spacing.xs,
     marginBottom: Spacing.xs,
   },
