@@ -4,13 +4,13 @@ import {
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { HomeStackParamList, ReadingLevel } from '../../types';
-import { Colors, FontSize, Spacing, BorderRadius, Shadow } from '../../constants/theme';
+import { Colors, Spacing, BorderRadius, Shadow } from '../../constants/theme';
 import { SafeScreen } from '../../components/common/SafeScreen';
 import { Button } from '../../components/ui/Button';
-import { InputField } from '../../components/ui/InputField';
 import { Card } from '../../components/ui/Card';
 import { contentApi } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
+import { useResponsiveLayout } from '../../utils/responsiveHelpers';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'GenerateStory'>;
 
@@ -45,6 +45,24 @@ const getWordCountOptions = (level: ReadingLevel): number[] => {
 
 export function GenerateStoryScreen({ navigation }: Props) {
   const { user } = useAuth();
+  
+  // Responsive layout
+  const { spacing, mScale, screenPadding, formMaxWidth, centeredContent, isTablet } = useResponsiveLayout();
+  
+  // Responsive font sizes
+  const backTextSize = mScale(16, 0.3);
+  const headerEmojiSize = mScale(56, 0.4);
+  const titleSize = mScale(isTablet ? 32 : 28, 0.35);
+  const subtitleSize = mScale(16, 0.3);
+  const sectionLabelSize = mScale(14, 0.3);
+  const inputLabelSize = mScale(14, 0.3);
+  const suggestionTextSize = mScale(14, 0.3);
+  const levelEmojiSize = mScale(16, 0.3);
+  const levelLabelSize = mScale(14, 0.3);
+  const wordChipTextSize = mScale(16, 0.3);
+  const aiNoticeTextSize = mScale(14, 0.3);
+  const hintTextSize = mScale(14, 0.3);
+  
   const [topic, setTopic] = useState('');
   const [level, setLevel] = useState<ReadingLevel>(
     (user?.readingLevel as ReadingLevel) ?? 'ELEMENTARY',
@@ -68,6 +86,8 @@ export function GenerateStoryScreen({ navigation }: Props) {
   }, [level, maxWords]);
 
   const handleGenerate = async () => {
+    if (isGenerating) return;
+    
     if (!topic.trim() || topic.trim().length < 2) {
       setTopicError('Please enter a topic (at least 2 characters)');
       return;
@@ -75,108 +95,138 @@ export function GenerateStoryScreen({ navigation }: Props) {
     setTopicError('');
     setIsGenerating(true);
 
-    let lastError: Error | null = null;
-    const maxRetries = 3;
-    
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        console.log(`Generating story attempt ${attempt}/${maxRetries} with topic:`, topic.trim());
-        const story = await contentApi.generateStory({
-          topic: topic.trim(),
-          readingLevel: level,
-          ageGroup: user?.readingLevel === 'BEGINNER' ? '5-7' : '7-10',
-          maxWords,
-        });
-        console.log('Story generated successfully, ID:', story.id);
+    try {
+      console.log('Generating story with topic:', topic.trim());
+      const story = await contentApi.generateStory({
+        topic: topic.trim(),
+        readingLevel: level,
+        ageGroup: user?.readingLevel === 'BEGINNER' ? '5-7' : '7-10',
+        maxWords,
+      });
+      console.log('Story generated successfully, ID:', story.id);
 
-        // Navigate to reading mode with the new story
-        // @ts-ignore - navigation typing issue
-        navigation.navigate('ReadingMode', { storyId: story.id });
-        console.log('Navigation called to ReadingMode with storyId:', story.id);
-        return; // Success, exit the function
-      } catch (err: unknown) {
-        lastError = err instanceof Error ? err : new Error('Story generation failed');
-        console.error(`Attempt ${attempt} failed:`, lastError.message);
-        
-        // If this is not the last attempt, wait a bit before retrying
-        if (attempt < maxRetries) {
-          // Exponential backoff: 1s, 2s, 4s
-          const delay = Math.pow(2, attempt - 1) * 1000;
-          await new Promise(resolve => setTimeout(resolve, delay));
-        }
-      }
+      // Navigate to reading mode with the new story
+      // @ts-ignore - navigation typing issue
+      navigation.navigate('ReadingMode', { storyId: story.id });
+      console.log('Navigation called to ReadingMode with storyId:', story.id);
+      // Note: Not setting isGenerating(false) here to avoid UI flash during navigation transition
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Story generation failed. Please try again.';
+      console.error('Story generation failed:', msg);
+      Alert.alert('Generation Failed', msg);
+      setIsGenerating(false);
     }
-
-    // All attempts failed
-    const msg = lastError?.message || 'Story generation failed. Please try again.';
-    Alert.alert('Generation Failed', `Failed to generate story after ${maxRetries} attempts. ${msg}`);
-    setIsGenerating(false);
   };
 
   return (
     <SafeScreen scrollable withKeyboard backgroundColor={Colors.cream}>
+      <View style={[centeredContent, { width: '100%' }]}>
       {/* Back */}
       <TouchableOpacity
-        style={styles.backBtn}
+        style={[styles.backBtn, { paddingVertical: spacing.sm, marginBottom: spacing.xs }]}
         onPress={() => navigation.goBack()}
         accessibilityRole="button"
       >
-        <Text style={styles.backText}>← Back</Text>
+        <Text style={[styles.backText, { fontSize: backTextSize }]}>← Back</Text>
       </TouchableOpacity>
 
       {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerEmoji}>✨</Text>
-        <Text style={styles.title}>Create Your Story</Text>
-        <Text style={styles.subtitle}>
+      <View style={[styles.header, { paddingBottom: spacing.xl, gap: spacing.sm }]}>
+        <Text style={[styles.headerEmoji, { fontSize: headerEmojiSize }]}>✨</Text>
+        <Text style={[styles.title, { fontSize: titleSize }]}>Create Your Story</Text>
+        <Text style={[styles.subtitle, { fontSize: subtitleSize, lineHeight: subtitleSize * 1.5 }]}>
           Tell our AI what you want to read about and we'll write a story just for you!
         </Text>
       </View>
 
       {/* Topic input */}
-      <Text style={{ marginBottom: 8, fontSize: FontSize.sm, fontWeight: '600', color: Colors.textPrimary }}>What should the story be about? *</Text>
+      <Text style={{ 
+        marginBottom: spacing.sm, 
+        fontSize: inputLabelSize, 
+        fontWeight: '600', 
+        color: Colors.textPrimary 
+      }}>
+        What should the story be about? *
+      </Text>
       <TextInput
         value={topic}
         onChangeText={setTopic}
-        style={[styles.plainInput, topicError && styles.plainInputError]}
+        style={[styles.plainInput, 
+          { 
+            borderRadius: BorderRadius.lg,
+            backgroundColor: Colors.white,
+            paddingHorizontal: spacing.lg,
+            paddingVertical: spacing.md,
+            fontSize: subtitleSize,
+            marginBottom: spacing.md,
+            minHeight: mScale(52, 0.2),
+          },
+          topicError && styles.plainInputError
+        ]}
         placeholder="e.g. a brave little turtle..."
         autoCapitalize="none"
         maxLength={100}
       />
-      {topicError && <Text style={{ color: Colors.error, marginBottom: 16 }}>{topicError}</Text>}
+      {topicError && <Text style={{ color: Colors.error, marginBottom: spacing.lg }}>{topicError}</Text>}
 
       {/* Topic suggestions */}
-      <Text style={styles.sectionLabel}>Or pick an idea:</Text>
+      <Text style={[styles.sectionLabel, { fontSize: sectionLabelSize, marginBottom: spacing.md }]}>
+        Or pick an idea:
+      </Text>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.suggestionsRow}
-        style={styles.suggestionsScroll}
+        contentContainerStyle={[
+          styles.suggestionsRow,
+          { gap: spacing.sm, paddingHorizontal: screenPadding, paddingVertical: spacing.xs }
+        ]}
+        style={[styles.suggestionsScroll, { marginBottom: spacing.xs, marginHorizontal: -screenPadding }]}
       >
         {TOPIC_SUGGESTIONS.map((s) => (
           <TouchableOpacity
             key={s}
-            style={[styles.suggestion, topic === s.slice(2) && styles.suggestionSelected]}
+            style={[
+              styles.suggestion, 
+              { 
+                paddingHorizontal: spacing.md, 
+                paddingVertical: spacing.sm,
+              },
+              topic === s.slice(2) && styles.suggestionSelected
+            ]}
             onPress={() => setTopic(s.slice(2))}
           >
-            <Text style={styles.suggestionText}>{s}</Text>
+            <Text style={[styles.suggestionText, { fontSize: suggestionTextSize }]}>{s}</Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
 
       {/* Reading level */}
-      <Text style={[styles.sectionLabel, { marginTop: Spacing.xl }]}>Reading Level</Text>
-      <View style={styles.levelRow}>
+      <Text style={[styles.sectionLabel, { fontSize: sectionLabelSize, marginBottom: spacing.md, marginTop: spacing.xl }]}>
+        Reading Level
+      </Text>
+      <View style={[styles.levelRow, { gap: spacing.sm }]}>
         {LEVELS.map((l) => (
           <TouchableOpacity
             key={l.value}
-            style={[styles.levelChip, level === l.value && styles.levelChipSelected]}
+            style={[
+              styles.levelChip, 
+              { 
+                paddingHorizontal: spacing.md, 
+                paddingVertical: spacing.sm,
+                gap: spacing.xs,
+              },
+              level === l.value && styles.levelChipSelected
+            ]}
             onPress={() => setLevel(l.value)}
             accessibilityRole="radio"
             accessibilityState={{ checked: level === l.value }}
           >
-            <Text style={styles.levelEmoji}>{l.emoji}</Text>
-            <Text style={[styles.levelLabel, level === l.value && styles.levelLabelSelected]}>
+            <Text style={[styles.levelEmoji, { fontSize: levelEmojiSize }]}>{l.emoji}</Text>
+            <Text style={[
+              styles.levelLabel, 
+              { fontSize: levelLabelSize },
+              level === l.value && styles.levelLabelSelected
+            ]}>
               {l.label}
             </Text>
           </TouchableOpacity>
@@ -184,15 +234,25 @@ export function GenerateStoryScreen({ navigation }: Props) {
       </View>
 
       {/* Word count */}
-      <Text style={[styles.sectionLabel, { marginTop: Spacing.xl }]}>Story Length</Text>
-      <View style={styles.wordCountRow}>
+      <Text style={[styles.sectionLabel, { fontSize: sectionLabelSize, marginBottom: spacing.md, marginTop: spacing.xl }]}>
+        Story Length
+      </Text>
+      <View style={[styles.wordCountRow, { gap: spacing.sm }]}>
         {getWordCountOptions(level).map((w) => (
           <TouchableOpacity
             key={w}
-            style={[styles.wordChip, maxWords === w && styles.wordChipSelected]}
+            style={[
+              styles.wordChip, 
+              { paddingVertical: spacing.md },
+              maxWords === w && styles.wordChipSelected
+            ]}
             onPress={() => setMaxWords(w)}
           >
-            <Text style={[styles.wordChipText, maxWords === w && styles.wordChipTextSelected]}>
+            <Text style={[
+              styles.wordChipText, 
+              { fontSize: wordChipTextSize },
+              maxWords === w && styles.wordChipTextSelected
+            ]}>
               {w}w
             </Text>
           </TouchableOpacity>
@@ -200,8 +260,8 @@ export function GenerateStoryScreen({ navigation }: Props) {
       </View>
 
       {/* AI notice */}
-      <Card variant="flat" style={styles.aiNotice}>
-        <Text style={styles.aiNoticeText}>
+      <Card variant="flat" style={[styles.aiNotice, { marginTop: spacing.xl }]}>
+        <Text style={[styles.aiNoticeText, { fontSize: aiNoticeTextSize, lineHeight: aiNoticeTextSize * 1.6 }]}>
           🤖 Our AI will write a story with{' '}
           <Text style={styles.aiNoticeHighlight}>syllable breakdowns</Text> for every tricky word,
           designed specifically for your reading level.
@@ -215,86 +275,127 @@ export function GenerateStoryScreen({ navigation }: Props) {
         isLoading={isGenerating}
         fullWidth
         size="lg"
-        style={styles.generateBtn}
+        style={[styles.generateBtn, { marginTop: spacing.xl }]}
       />
 
       {isGenerating && (
-        <Text style={styles.generatingHint}>
+        <Text style={[styles.generatingHint, { fontSize: hintTextSize, marginTop: spacing.md }]}>
           This takes about 10-15 seconds. Sit tight! 🌟
         </Text>
       )}
+      </View>
     </SafeScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  backBtn: { paddingVertical: Spacing.sm, marginBottom: Spacing.xs },
-  backText: { fontSize: FontSize.md, color: Colors.purple, fontWeight: '600' },
-  header: { alignItems: 'center', paddingBottom: Spacing.xl, gap: Spacing.sm },
-  headerEmoji: { fontSize: 56 },
+  backBtn: { 
+    // paddingVertical, marginBottom handled dynamically
+  },
+  backText: { color: Colors.purple, fontWeight: '600' },
+  header: { 
+    alignItems: 'center',
+    // paddingBottom, gap handled dynamically
+  },
+  headerEmoji: { 
+    // fontSize handled dynamically
+  },
   title: {
-    fontSize: FontSize.xxxl, fontWeight: '800', color: Colors.textPrimary,
-    textAlign: 'center', letterSpacing: -0.5,
+    fontWeight: '800', 
+    color: Colors.textPrimary,
+    textAlign: 'center', 
+    letterSpacing: -0.5,
+    // fontSize handled dynamically
   },
   subtitle: {
-    fontSize: FontSize.md, color: Colors.textSecondary,
-    textAlign: 'center', lineHeight: 24, letterSpacing: 0.3,
+    color: Colors.textSecondary,
+    textAlign: 'center', 
+    letterSpacing: 0.3,
+    // fontSize, lineHeight handled dynamically
   },
   sectionLabel: {
-    fontSize: FontSize.sm, fontWeight: '700', color: Colors.textSecondary,
-    marginBottom: Spacing.md, letterSpacing: 0.3,
+    fontWeight: '700', 
+    color: Colors.textSecondary,
+    letterSpacing: 0.3,
+    // fontSize, marginBottom handled dynamically
   },
-  suggestionsScroll: { marginBottom: Spacing.xs, marginHorizontal: -Spacing.screen },
+  suggestionsScroll: { 
+    // marginBottom, marginHorizontal handled dynamically
+  },
   suggestionsRow: {
-    flexDirection: 'row', gap: Spacing.sm,
-    paddingHorizontal: Spacing.screen, paddingVertical: Spacing.xs,
+    flexDirection: 'row',
+    // gap, paddingHorizontal, paddingVertical handled dynamically
   },
   suggestion: {
-    backgroundColor: Colors.white, paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm,
-    borderRadius: BorderRadius.full, borderWidth: 1.5, borderColor: Colors.border,
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.full, 
+    borderWidth: 1.5, 
+    borderColor: Colors.border,
     ...Shadow.sm,
+    // paddingHorizontal, paddingVertical handled dynamically
   },
   suggestionSelected: { borderColor: Colors.purple, backgroundColor: Colors.lavender },
-  suggestionText: { fontSize: FontSize.sm, color: Colors.textPrimary, fontWeight: '500' },
-  levelRow: { flexDirection: 'row', gap: Spacing.sm, flexWrap: 'wrap' },
+  suggestionText: { color: Colors.textPrimary, fontWeight: '500' },
+  levelRow: { 
+    flexDirection: 'row', 
+    flexWrap: 'wrap',
+    // gap handled dynamically
+  },
   levelChip: {
-    flexDirection: 'row', alignItems: 'center', gap: Spacing.xs,
-    paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm,
-    borderRadius: BorderRadius.full, backgroundColor: Colors.white,
-    borderWidth: 2, borderColor: Colors.border, ...Shadow.sm,
+    flexDirection: 'row', 
+    alignItems: 'center',
+    borderRadius: BorderRadius.full, 
+    backgroundColor: Colors.white,
+    borderWidth: 2, 
+    borderColor: Colors.border, 
+    ...Shadow.sm,
+    // paddingHorizontal, paddingVertical, gap handled dynamically
   },
   levelChipSelected: { borderColor: Colors.purple, backgroundColor: Colors.lavender },
-  levelEmoji: { fontSize: 16 },
-  levelLabel: { fontSize: FontSize.sm, fontWeight: '600', color: Colors.textPrimary },
+  levelEmoji: { 
+    // fontSize handled dynamically
+  },
+  levelLabel: { fontWeight: '600', color: Colors.textPrimary },
   levelLabelSelected: { color: Colors.purple },
-  wordCountRow: { flexDirection: 'row', gap: Spacing.sm },
+  wordCountRow: { 
+    flexDirection: 'row',
+    // gap handled dynamically
+  },
   wordChip: {
-    flex: 1, paddingVertical: Spacing.md, borderRadius: BorderRadius.lg,
-    alignItems: 'center', backgroundColor: Colors.white,
-    borderWidth: 2, borderColor: Colors.border,
+    flex: 1, 
+    borderRadius: BorderRadius.lg,
+    alignItems: 'center', 
+    backgroundColor: Colors.white,
+    borderWidth: 2, 
+    borderColor: Colors.border,
+    // paddingVertical handled dynamically
   },
   wordChipSelected: { borderColor: Colors.orange, backgroundColor: Colors.softPeach },
-  wordChipText: { fontSize: FontSize.md, fontWeight: '700', color: Colors.textSecondary },
+  wordChipText: { fontWeight: '700', color: Colors.textSecondary },
   wordChipTextSelected: { color: Colors.orange },
-  aiNotice: { marginTop: Spacing.xl },
-  aiNoticeText: { fontSize: FontSize.sm, color: Colors.textSecondary, lineHeight: 22, letterSpacing: 0.2 },
+  aiNotice: { 
+    // marginTop handled dynamically
+  },
+  aiNoticeText: { 
+    color: Colors.textSecondary, 
+    letterSpacing: 0.2,
+    // fontSize, lineHeight handled dynamically
+  },
   aiNoticeHighlight: { color: Colors.purple, fontWeight: '700' },
-  generateBtn: { marginTop: Spacing.xl },
+  generateBtn: { 
+    // marginTop handled dynamically
+  },
   generatingHint: {
-    textAlign: 'center', fontSize: FontSize.sm, color: Colors.textMuted,
-    marginTop: Spacing.md, letterSpacing: 0.3,
+    textAlign: 'center', 
+    color: Colors.textMuted,
+    letterSpacing: 0.3,
+    // fontSize, marginTop handled dynamically
   },
   plainInput: {
     borderWidth: 2,
     borderColor: Colors.border,
-    borderRadius: BorderRadius.lg,
-    backgroundColor: Colors.white,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    fontSize: FontSize.md,
     color: Colors.textPrimary,
-    marginBottom: Spacing.md,
-    minHeight: 52,
+    // borderRadius, backgroundColor, paddingHorizontal, paddingVertical, fontSize, marginBottom, minHeight handled dynamically
   },
   plainInputError: {
     borderColor: Colors.error,

@@ -8,19 +8,19 @@ import {
   ViewStyle,
   TouchableOpacity,
 } from 'react-native';
-import { Colors, BorderRadius, FontSize, Spacing } from '../../constants/theme';
+import { Colors, BorderRadius, RFontSize, RSpacing, MIN_TOUCH } from '../../constants/theme';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface InputFieldProps extends TextInputProps {
-  label: string;
-  error?: string;
-  hint?: string;
-  leftIcon?: React.ReactNode;
-  rightIcon?: React.ReactNode;
+  label:             string;
+  error?:            string;
+  hint?:             string;
+  leftIcon?:         React.ReactNode;
+  rightIcon?:        React.ReactNode;
   onRightIconPress?: () => void;
-  containerStyle?: ViewStyle;
-  required?: boolean;
+  containerStyle?:   ViewStyle;
+  required?:         boolean;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -42,7 +42,6 @@ export const InputField = forwardRef<TextInput, InputFieldProps>(
     ref,
   ) => {
     const [isFocused, setIsFocused] = useState(false);
-
     const hasError = !!error;
 
     return (
@@ -58,7 +57,7 @@ export const InputField = forwardRef<TextInput, InputFieldProps>(
           style={[
             styles.inputWrapper,
             isFocused && styles.focused,
-            hasError && styles.error,
+            hasError  && styles.error,
           ]}
         >
           {leftIcon && <View style={styles.iconLeft}>{leftIcon}</View>}
@@ -69,7 +68,7 @@ export const InputField = forwardRef<TextInput, InputFieldProps>(
             accessibilityHint={hint}
             style={[
               styles.input,
-              leftIcon ? styles.inputWithLeft : undefined,
+              leftIcon  ? styles.inputWithLeft  : undefined,
               rightIcon ? styles.inputWithRight : undefined,
               style,
             ]}
@@ -107,73 +106,73 @@ InputField.displayName = 'InputField';
 
 const styles = StyleSheet.create({
   container: {
-    width: '100%',
-    marginBottom: Spacing.lg,
+    width:        '100%',
+    marginBottom: RSpacing.lg,
   },
   label: {
-    fontSize: FontSize.sm,
-    fontWeight: '600',
-    color: Colors.textPrimary,
-    marginBottom: Spacing.xs,
+    fontSize:      RFontSize.sm,
+    fontWeight:    '600',
+    color:         Colors.textPrimary,
+    marginBottom:  RSpacing.xs,
     letterSpacing: 0.3,
   },
   required: {
     color: Colors.error,
   },
   inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: Colors.border,
-    borderRadius: BorderRadius.lg,
+    flexDirection:   'row',
+    alignItems:      'center',
+    borderWidth:     2,
+    borderColor:     Colors.border,
+    borderRadius:    BorderRadius.lg,
     backgroundColor: Colors.white,
-    minHeight: 52,
+    minHeight:       Math.max(MIN_TOUCH + 8, 52),
   },
   focused: {
-    borderColor: Colors.borderFocus,
-    shadowColor: Colors.purple,
+    borderColor:  Colors.borderFocus,
+    shadowColor:  Colors.purple,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.15,
-    shadowRadius: 6,
+    shadowRadius:  6,
   },
   error: {
     borderColor: Colors.error,
   },
   input: {
-    flex: 1,
-    fontSize: FontSize.md,
-    color: Colors.textPrimary,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    letterSpacing: 0.3,
-    lineHeight: 22,
+    flex:             1,
+    fontSize:         RFontSize.md,
+    color:            Colors.textPrimary,
+    paddingHorizontal: RSpacing.lg,
+    paddingVertical:   RSpacing.md,
+    letterSpacing:     0.3,
+    // lineHeight set inline so it scales with dynamic font size
   },
   inputWithLeft: {
-    paddingLeft: Spacing.sm,
+    paddingLeft: RSpacing.sm,
   },
   inputWithRight: {
-    paddingRight: Spacing.sm,
+    paddingRight: RSpacing.sm,
   },
   iconLeft: {
-    paddingLeft: Spacing.lg,
+    paddingLeft: RSpacing.lg,
   },
   iconRight: {
-    paddingRight: Spacing.lg,
-    minWidth: 44,
-    minHeight: 44,
+    paddingRight: RSpacing.lg,
+    minWidth:     MIN_TOUCH,
+    minHeight:    MIN_TOUCH,
     justifyContent: 'center',
-    alignItems: 'center',
+    alignItems:     'center',
   },
   errorText: {
-    fontSize: FontSize.sm,
-    color: Colors.error,
-    marginTop: Spacing.xs,
+    fontSize:      RFontSize.sm,
+    color:         Colors.error,
+    marginTop:     RSpacing.xs,
     letterSpacing: 0.2,
   },
   hintText: {
-    fontSize: FontSize.sm,
-    color: Colors.textMuted,
-    marginTop: Spacing.xs,
+    fontSize:      RFontSize.sm,
+    color:         Colors.textMuted,
+    marginTop:     RSpacing.xs,
     letterSpacing: 0.2,
   },
 });

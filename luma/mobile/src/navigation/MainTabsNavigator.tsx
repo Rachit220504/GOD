@@ -3,8 +3,8 @@ import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { MainTabParamList, HomeStackParamList } from '../types';
-import { Colors, Spacing, Shadow } from '../constants/theme';
-import { TAB_BAR_HEIGHT } from '../utils/responsive';
+import { Colors, Shadow } from '../constants/theme';
+import { useResponsiveLayout } from '../utils/responsiveHelpers';
 
 // Screens
 import { HomeScreen } from '../screens/home/HomeScreen';
@@ -25,24 +25,37 @@ function TabIcon({
   label,
   focused,
   image,
-  customImage, // Renamed to avoid conflicts
+  customImage,
 }: {
   emoji: string;
   label: string;
   focused: boolean;
   image?: any;
-  customImage?: any; // New prop for custom images
+  customImage?: any;
 }) {
+  const { isLandscape, isTablet, spacing, mScale } = useResponsiveLayout();
+  
+  // Responsive sizing
+  const iconSize = isTablet ? 28 : isLandscape ? 20 : 24;
+  const labelSize = mScale(isTablet ? 11 : 10, 0.3);
+  const itemPadding = isLandscape ? spacing.sm : spacing.md;
+  
   return (
-    <View style={styles.tabItem}>
+    <View style={[styles.tabItem, { padding: itemPadding }]}>
       {customImage ? (
-        <Image source={customImage} style={styles.tabImage} />
+        <Image source={customImage} style={[styles.tabImage, { width: iconSize, height: iconSize }]} />
       ) : image ? (
-        <Image source={image} style={styles.tabImage} />
+        <Image source={image} style={[styles.tabImage, { width: iconSize, height: iconSize }]} />
       ) : (
-        <Text style={styles.tabEmoji}>{emoji}</Text>
+        <Text style={[styles.tabEmoji, { fontSize: iconSize }]}>{emoji}</Text>
       )}
-      <Text style={[styles.tabLabel, focused && styles.tabLabelFocused]}>{label}</Text>
+      <Text style={[
+        styles.tabLabel, 
+        focused && styles.tabLabelFocused,
+        { fontSize: labelSize }
+      ]}>
+        {label}
+      </Text>
     </View>
   );
 }
@@ -88,11 +101,16 @@ function ReadingStackNavigator() {
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
 export function MainTabsNavigator() {
+  const { tabBarHeight } = useResponsiveLayout();
+  
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarStyle: styles.tabBar,
+        tabBarStyle: [
+          styles.tabBar,
+          { height: tabBarHeight }
+        ],
         tabBarShowLabel: false,
       }}
     >
@@ -219,7 +237,6 @@ const styles = StyleSheet.create({
   tabBar: {
     backgroundColor: Colors.white,
     borderTopWidth: 0,
-    height: TAB_BAR_HEIGHT,
     paddingBottom: 8,
     ...Shadow.md,
   },
@@ -231,14 +248,13 @@ const styles = StyleSheet.create({
   tabItem: {
     alignItems: 'center',
     gap: 3,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
     borderRadius: 12,
     minWidth: 56,
   },
-    tabEmoji: { fontSize: 22 },
+  tabEmoji: { 
+    // Size set dynamically in component
+  },
   tabLabel: {
-    fontSize: 10,
     fontWeight: '600',
     color: Colors.textMuted,
     letterSpacing: 0.3,
@@ -247,8 +263,6 @@ const styles = StyleSheet.create({
     color: Colors.purple,
   },
   tabImage: {
-    width: 24,
-    height: 24,
     resizeMode: 'contain',
   },
 });

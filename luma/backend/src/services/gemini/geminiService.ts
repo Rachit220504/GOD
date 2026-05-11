@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI, GenerativeModel, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
+import { GoogleGenerativeAI, GenerativeModel, HarmCategory, HarmBlockThreshold, SchemaType } from '@google/generative-ai';
 import { logger } from '../../config/logger';
 import { ReadingLevel } from '@prisma/client';
 
@@ -65,7 +65,7 @@ class GeminiService {
         },
       ],
       generationConfig: {
-        temperature: 0.8,
+        temperature: 0.7,
         topK: 40,
         topP: 0.95,
         maxOutputTokens: 2048,
@@ -111,22 +111,8 @@ Rules for dyslexia-friendly writing:
 3. Avoid homophones and confusing word pairs (e.g. b/d words)
 4. One idea per sentence
 5. Positive, engaging tone
-6. Break story into short paragraphs (max 3 sentences each)
-
-Return ONLY valid JSON matching this exact schema (no markdown fences):
-{
-  "title": "string (max 6 words, engaging and simple)",
-  "body": "string (the full story, paragraphs separated by \\n\\n)",
-  "tags": ["string array of 3-5 relevant topics"],
-  "syllableMap": [
-    {
-      "word": "rainbow",
-      "syllables": ["rain", "bow"],
-      "chunks": ["rain", "bow"],
-      "pronunciation": "RAIN-boh"
-    }
-  ]
-}
+6. Create a coherent narrative with a clear beginning, middle, and end.
+7. Break story into short paragraphs (max 3 sentences each) returning them as an array of strings.
 
 The syllableMap must include EVERY unique word in the story that has 2+ syllables.
 For 1-syllable words, still include them if they might be challenging for a young reader.
@@ -138,33 +124,40 @@ For 1-syllable words, still include them if they might be challenging for a youn
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         logger.debug(`Generating story: topic="${topic}", level=${readingLevel}, attempt=${attempt}`);
-        const result = await this.model.generateContent(prompt);
+        const result = await this.model.generateContent({
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          generationConfig: {
+            responseMimeType: 'application/json',
+            responseSchema: {
+              type: SchemaType.OBJECT,
+              properties: {
+                title: { type: SchemaType.STRING, description: "max 6 words, engaging and simple" },
+                paragraphs: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING }, description: "the full story, separated into an array of strings representing paragraphs" },
+                tags: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING }, description: "3-5 relevant topics" },
+                syllableMap: {
+                  type: SchemaType.ARRAY,
+                  items: {
+                    type: SchemaType.OBJECT,
+                    properties: {
+                      word: { type: SchemaType.STRING },
+                      syllables: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+                      chunks: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+                      pronunciation: { type: SchemaType.STRING }
+                    },
+                    required: ["word", "syllables", "chunks", "pronunciation"]
+                  }
+                }
+              },
+              required: ["title", "paragraphs", "tags", "syllableMap"]
+            }
+          }
+        });
         const response = result.response;
         const text = response.text();
 
-        // Strip any accidental markdown fences Gemini might add
-        let cleanJson = text.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
-
-        // Attempt to fix common JSON issues from Gemini
-        // 1. Fix unterminated strings by trying to close them
-        const openQuotes = (cleanJson.match(/"(?:(?!["\\]).|\\.)*$/g) || []).length;
-        if (openQuotes > 0) {
-          logger.warn(`Detected ${openQuotes} unterminated string(s), attempting to fix...`);
-          // Try to close the last string by adding quote and closing braces
-          cleanJson = cleanJson.replace(/,(\s*)$/, ''); // Remove trailing comma
-          cleanJson = cleanJson.replace(/"(?:(?!["\\]).|\\.)*$/, '"'); // Close last string
-          // Add missing closing braces/brackets if needed
-          const openBraces = (cleanJson.match(/\{/g) || []).length;
-          const closeBraces = (cleanJson.match(/\}/g) || []).length;
-          const openBrackets = (cleanJson.match(/\[/g) || []).length;
-          const closeBrackets = (cleanJson.match(/\]/g) || []).length;
-          cleanJson += '}'.repeat(Math.max(0, openBraces - closeBraces));
-          cleanJson += ']'.repeat(Math.max(0, openBrackets - closeBrackets));
-        }
-
-        let parsed: { title: string; body: string; tags: string[]; syllableMap: SyllableEntry[] };
+        let parsed: { title: string; paragraphs: string[]; tags: string[]; syllableMap: SyllableEntry[] };
         try {
-          parsed = JSON.parse(cleanJson);
+          parsed = JSON.parse(text);
         } catch (parseError) {
           logger.error('Failed to parse Gemini response (will retry):', text.substring(0, 200));
           lastError = new Error(`Invalid JSON: ${parseError instanceof Error ? parseError.message : 'Parse error'}`);
@@ -178,18 +171,19 @@ For 1-syllable words, still include them if they might be challenging for a youn
           throw lastError;
         }
 
-        if (!parsed.title || !parsed.body || !Array.isArray(parsed.syllableMap)) {
+        if (!parsed.title || !Array.isArray(parsed.paragraphs) || !Array.isArray(parsed.syllableMap)) {
           throw new Error('Gemini returned malformed story JSON structure');
         }
 
-        const words = parsed.body.trim().split(/\s+/);
+        const bodyText = parsed.paragraphs.join('\n\n');
+        const words = bodyText.trim().split(/\s+/);
         const wordCount = words.length;
         const wordsPerMinute = readingLevel === 'BEGINNER' ? 50 : readingLevel === 'ELEMENTARY' ? 80 : 120;
         const estimatedReadingMinutes = Math.max(1, Math.round(wordCount / wordsPerMinute));
 
         const story: GeneratedStory = {
           title: parsed.title,
-          body: parsed.body,
+          body: bodyText,
           syllableMap: parsed.syllableMap,
           wordCount,
           estimatedReadingMinutes,
@@ -248,16 +242,6 @@ Break each word below into syllables and provide a pronunciation hint.
 
 Words: ${uniqueWords.join(', ')}
 
-Return ONLY valid JSON (no markdown, no explanation) — an array of objects:
-[
-  {
-    "word": "butterfly",
-    "syllables": ["but", "ter", "fly"],
-    "chunks": ["but", "ter", "fly"],
-    "pronunciation": "BUT-ter-fly"
-  }
-]
-
 Rules:
 - Use standard English syllabification
 - chunks = same as syllables (visual breaking points)
@@ -267,10 +251,27 @@ Rules:
 
     try {
       logger.debug(`Syllabifying ${uniqueWords.length} words`);
-      const result = await this.model.generateContent(prompt);
+      const result = await this.model.generateContent({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: SchemaType.ARRAY,
+            items: {
+              type: SchemaType.OBJECT,
+              properties: {
+                word: { type: SchemaType.STRING },
+                syllables: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+                chunks: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+                pronunciation: { type: SchemaType.STRING }
+              },
+              required: ["word", "syllables", "chunks", "pronunciation"]
+            }
+          }
+        }
+      });
       const text2 = result.response.text();
-      const cleanJson = text2.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
-      const entries = JSON.parse(cleanJson) as SyllableEntry[];
+      const entries = JSON.parse(text2) as SyllableEntry[];
 
       if (!Array.isArray(entries)) {
         throw new Error('Syllabification response is not an array');

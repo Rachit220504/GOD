@@ -1,6 +1,11 @@
 // ─── LUMA App Theme System ────────────────────────────────────────────────────
 // Dyslexia-first color palette. No pure black or white anywhere.
 
+import { mScale, isTablet } from '../utils/responsive';
+export * from '../utils/responsiveHelpers';
+// Re-export SCREEN_PADDING for backward compatibility
+export { SCREEN_PADDING } from '../utils/responsive';
+
 export const Colors = {
   // Backgrounds
   cream: '#FDFBF7',
@@ -53,34 +58,70 @@ export const FontFamily = {
   serif: 'serif',
 } as const;
 
+// ─── Static font sizes (base design at 390px) ─────────────────────────────────
+// Use these inside StyleSheet.create() where hooks can't be called.
 export const FontSize = {
-  xs: 12,
-  sm: 14,
-  md: 16,
-  lg: 18,
-  xl: 20,
-  xxl: 24,
-  xxxl: 30,
+  xs:      12,
+  sm:      14,
+  md:      16,
+  lg:      18,
+  xl:      20,
+  xxl:     24,
+  xxxl:    30,
   display: 38,
 } as const;
 
+// ─── Responsive font sizes (moderate-scaled for device width) ─────────────────
+// These are computed once at module init using mScale (factor 0.35).
+// They adapt better across iPhone SE → iPad Pro than the raw FontSize values.
+// Use in StyleSheet.create() for typography that should scale with screen size.
+export const RFontSize = {
+  xs:      mScale(12),
+  sm:      mScale(14),
+  md:      mScale(16),
+  lg:      mScale(18),
+  xl:      mScale(20),
+  xxl:     mScale(24),
+  xxxl:    mScale(30),
+  display: mScale(38),
+} as const;
+
 export const Spacing = {
-  xs: 4,
-  sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 24,
-  xxl: 32,
-  xxxl: 48,
+  xs:     4,
+  sm:     8,
+  md:     12,
+  lg:     16,
+  xl:     24,
+  xxl:    32,
+  xxxl:   48,
   screen: 20,
 } as const;
 
+// ─── Responsive spacing (adapts to tablet) ───────────────────────────────────
+// Tablet gets +25% spacing for balanced breathing room.
+const _tabletMult = isTablet ? 1.25 : 1;
+
+export const RSpacing = {
+  xs:     Math.round(4  * _tabletMult),
+  sm:     Math.round(8  * _tabletMult),
+  md:     Math.round(12 * _tabletMult),
+  lg:     Math.round(16 * _tabletMult),
+  xl:     Math.round(24 * _tabletMult),
+  xxl:    Math.round(32 * _tabletMult),
+  xxxl:   Math.round(48 * _tabletMult),
+  screen: isTablet ? 36 : 20,
+} as const;
+
+// ─── Minimum touch target size (WCAG 2.5.8 / Apple HIG) ─────────────────────
+// 44×44 on phone, 48×48 on tablet.
+export const MIN_TOUCH = isTablet ? 48 : 44;
+
 export const BorderRadius = {
-  sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 24,
-  xxl: 32,
+  sm:   8,
+  md:   12,
+  lg:   16,
+  xl:   24,
+  xxl:  32,
   full: 9999,
 } as const;
 
@@ -110,12 +151,12 @@ export const Shadow = {
 
 // Default reading comfort values
 export const DefaultReadingComfort = {
-  fontSize: 18,
-  letterSpacing: 0.08,    // em
-  lineHeight: 1.5,
+  fontSize:        18,
+  letterSpacing:   0.08,   // em
+  lineHeight:      1.5,
   backgroundColor: Colors.cream,
-  fontFamily: FontFamily.lexend,
+  fontFamily:      FontFamily.lexend,
 } as const;
 
-export type ThemeColors = typeof Colors;
+export type ThemeColors  = typeof Colors;
 export type ThemeSpacing = typeof Spacing;

@@ -2,63 +2,77 @@
  * responsive.ts
  * ─────────────────────────────────────────────────────────────────────────────
  * Single source of truth for all responsive / adaptive layout logic.
- * All values are computed once at module initialisation from Dimensions.get().
+ *
+ * TWO layers:
+ *   1. Static constants  — computed once from Dimensions.get() at module init.
+ *      Safe to use inside StyleSheet.create() (no hook needed).
+ *      Will NOT react to orientation changes — for truly orientation-safe
+ *      values use the useResponsive() hook instead.
+ *
+ *   2. useResponsive()  — React hook using useWindowDimensions().
+ *      Re-renders the calling component on every dimension change
+ *      (orientation flip, split-screen resize, foldable fold/unfold).
+ *      Use this inside any component that needs to adapt to rotation.
  *
  * Usage:
- *   import { isTablet, rs, SCREEN_PADDING, CONTENT_MAX_WIDTH } from '../../utils/responsive';
+ *   // Static (StyleSheet / module level)
+ *   import { isTablet, mScale, SCREEN_PADDING } from '../../utils/responsive';
+ *
+ *   // Reactive (inside components)
+ *   import { useResponsive } from '../../utils/responsive';
+ *   const { isLandscape, screenPadding, phonicsColumns } = useResponsive();
  */
 
-import { Dimensions, PixelRatio } from 'react-native';
+import { Dimensions, PixelRatio, useWindowDimensions } from 'react-native';
 
-const { width: W, height: H } = Dimensions.get('window');
+// ─── 1. Static Layer (module-init) ────────────────────────────────────────────
 
-/** Raw screen dimensions */
-export const SCREEN_W = W;
-export const SCREEN_H = H;
+const { width: _W, height: _H } = Dimensions.get('window');
 
-/** Standard breakpoint: phones < 768px, tablets >= 768px */
-export const isTablet = W >= 768;
+/** Raw screen dimensions at launch */
+export const SCREEN_W = _W;
+export const SCREEN_H = _H;
 
-/** Large tablets / iPad Pro */
-export const isLargeTablet = W >= 1024;
+/** Standard breakpoints */
+export const isTablet      = _W >= 768;
+export const isLargeTablet = _W >= 1024;
 
-// ─── Scaling helpers ──────────────────────────────────────────────────────────
+// ── Scaling helpers ────────────────────────────────────────────────────────────
 
 /** Reference design width (iPhone 14, 390 pts) */
 const BASE = 390;
 
 /**
  * Linear scale proportional to screen width.
- * e.g. scale(20) → 20 on 390px, ≈39 on 768px.
+ * e.g. scale(20) → 20 on 390px, ≈39 on 768px
  */
-export function scale(size: number): number {
-  return PixelRatio.roundToNearestPixel((W / BASE) * size);
+export function scale(size: number, w: number = _W): number {
+  return PixelRatio.roundToNearestPixel((w / BASE) * size);
 }
 
 /**
  * Moderate scale — dampened by `factor` (0 = no scale, 1 = full linear).
- * Default factor 0.4 is good for font sizes.
+ * Default factor 0.35 is recommended for font sizes.
  */
-export function mScale(size: number, factor = 0.4): number {
-  return PixelRatio.roundToNearestPixel(size + (scale(size) - size) * factor);
+export function mScale(size: number, factor = 0.35, w: number = _W): number {
+  return PixelRatio.roundToNearestPixel(size + (scale(size, w) - size) * factor);
 }
 
 /** Width as a percentage of screen width */
-export const wp = (pct: number): number => (W * pct) / 100;
+export const wp = (pct: number, w: number = _W): number => (w * pct) / 100;
 
 /** Height as a percentage of screen height */
-export const hp = (pct: number): number => (H * pct) / 100;
+export const hp = (pct: number, h: number = _H): number => (h * pct) / 100;
 
 /**
  * Responsive select — returns `tabletValue` on tablets, `phoneValue` otherwise.
- * @example rs(1, 2)          // 1 column on phone, 2 on tablet
- * @example rs(20, 36)        // 20px padding on phone, 36px on tablet
+ * Static version; use useResponsive().rs() for orientation-aware selection.
  */
 export function rs<T>(phoneValue: T, tabletValue: T): T {
   return isTablet ? tabletValue : phoneValue;
 }
 
-// ─── Layout constants (derived once, reused everywhere) ───────────────────────
+// ── Static layout constants ────────────────────────────────────────────────────
 
 /** Horizontal screen / content padding */
 export const SCREEN_PADDING: number = rs(20, 36);
@@ -91,3 +105,75 @@ export const STORY_COLUMNS: number = rs(1, 2);
  * On tablet the form becomes a centred card; `undefined` on phone (full width).
  */
 export const FORM_MAX_WIDTH: number | undefined = isTablet ? 500 : undefined;
+
+// ─── 2. Reactive Hook Layer ───────────────────────────────────────────────────
+
+/**
+ * Compute responsive breakpoints from a given width/height pair.
+ * Extracted so we can use it both inside and outside the hook.
+ */
+function computeLayout(width: number, height: number) {
+  const tablet      = width >= 768;
+  const largeTablet = width >= 1024;
+  const landscape   = width > height;
+
+  const screenPadding   = tablet ? 36 : landscape ? 24 : 20;
+  const contentMaxWidth = largeTablet ? 860 : tablet ? 720 : undefined;
+  const formMaxWidth    = tablet ? 560 : landscape ? 440 : undefined;
+  const tabBarHeight    = tablet ? 88 : 72;
+
+  // Adaptive column counts
+  const phonicsColumns = largeTablet ? 4 : tablet ? 3 : landscape ? 3 : 2;
+  const storyColumns   = tablet ? 2 : landscape ? 2 : 1;
+  const statColumns    = tablet ? 4 : 2;
+  const badgeColumns   = largeTablet ? 6 : tablet ? 4 : 3;
+
+  /** Reading area max width — capped for optimal line length (65–75 chars) */
+  const readingMaxWidth = tablet ? 680 : undefined;
+
+  /** Moderately-scaled font for this screen width */
+  const mScaleFont = (size: number, factor = 0.35) =>
+    PixelRatio.roundToNearestPixel(size + ((width / BASE) * size - size) * factor);
+
+  const rs = <T>(phone: T, tabletVal: T): T => (tablet ? tabletVal : phone);
+
+  return {
+    width,
+    height,
+    isTablet: tablet,
+    isLargeTablet: largeTablet,
+    isLandscape: landscape,
+    isPortrait: !landscape,
+    screenPadding,
+    contentMaxWidth,
+    formMaxWidth,
+    tabBarHeight,
+    phonicsColumns,
+    storyColumns,
+    statColumns,
+    badgeColumns,
+    readingMaxWidth,
+    rs,
+    mScaleFont,
+    centeredContent: {
+      width: '100%' as const,
+      maxWidth: contentMaxWidth,
+      alignSelf: 'center' as const,
+    } as const,
+  };
+}
+
+export type ResponsiveLayout = ReturnType<typeof computeLayout>;
+
+/**
+ * useResponsive()
+ * React hook that returns the full responsive layout object.
+ * Re-renders whenever the window dimensions change (rotation, resize, etc.)
+ *
+ * @example
+ * const { isLandscape, screenPadding, phonicsColumns } = useResponsive();
+ */
+export function useResponsive(): ResponsiveLayout {
+  const { width, height } = useWindowDimensions();
+  return computeLayout(width, height);
+}

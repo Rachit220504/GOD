@@ -18,7 +18,8 @@ import { FruitTree } from '../../components/gamification/FruitTree';
 import { ReadingPet } from '../../components/gamification/ReadingPet';
 import { TreeDetailsModal } from '../../components/gamification/TreeDetailsModal';
 import { PetCustomizationModal } from '../../components/gamification/PetCustomizationModal';
-import { Colors, FontSize, Spacing, BorderRadius, Shadow } from '../../constants/theme';
+import { Colors, Spacing, BorderRadius, Shadow } from '../../constants/theme';
+import { useResponsiveLayout } from '../../utils/responsiveHelpers';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // INNER SCREEN COMPONENT
@@ -39,6 +40,36 @@ function GamificationScreenInner() {
     fruitTreeProgress,
     petProgress,
   } = useGamification();
+  
+  // Responsive layout
+  const { spacing, mScale, screenPadding, centeredContent, isTablet, calculateColumns } = useResponsiveLayout();
+  
+  // Responsive font sizes
+  const titleSize = mScale(isTablet ? 32 : 26, 0.35);
+  const subtitleSize = mScale(16, 0.3);
+  const badgeTextSize = mScale(14, 0.3);
+  const tabTextSize = mScale(16, 0.3);
+  const sectionTitleSize = mScale(20, 0.3);
+  const statValueSize = mScale(28, 0.35);
+  const statLabelSize = mScale(14, 0.3);
+  const skillNameSize = mScale(16, 0.3);
+  const skillPercentSize = mScale(16, 0.3);
+  const badgeNameSize = mScale(14, 0.3);
+  const achievementNameSize = mScale(16, 0.3);
+  const achievementDescSize = mScale(14, 0.3);
+  const testButtonTextSize = mScale(12, 0.3);
+  const loadingTextSize = mScale(16, 0.3);
+  
+  // Responsive sizing
+  const statCardWidth = isTablet ? '23%' : '48%';
+  const badgeColumns = calculateColumns(100, 80, 16);
+  const badgeWidth = `${100 / badgeColumns - 2}%`;
+  const badgeIconSize = mScale(60, 0.3);
+  const badgeEmojiSize = mScale(32, 0.3);
+  const achievementIconSize = mScale(32, 0.3);
+  const unlockedBadgeSize = mScale(28, 0.2);
+  const tabEmojiSize = mScale(20, 0.3);
+  const progressBarHeight = mScale(10, 0.2);
 
   const [contentAnim] = useState(new Animated.Value(1));
   const [showTreeDetails, setShowTreeDetails] = useState(false);
@@ -47,9 +78,11 @@ function GamificationScreenInner() {
   if (isLoading) {
     return (
       <SafeScreen>
-        <View style={styles.loadingContainer}>
+        <View style={[styles.loadingContainer, { backgroundColor: Colors.cream }]}>
           <LoadingSpinner message="Loading your world..." />
-          <Text style={styles.loadingText}>Preparing something magical...</Text>
+          <Text style={[styles.loadingText, { marginTop: spacing.lg, fontSize: loadingTextSize }]}>
+            Preparing something magical...
+          </Text>
         </View>
       </SafeScreen>
     );
@@ -58,57 +91,150 @@ function GamificationScreenInner() {
   return (
     <SafeScreen scrollable backgroundColor={Colors.cream}>
       {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.title}>My Progress</Text>
-        <Text style={styles.subtitle}>Keep reading to grow your tree and pet!</Text>
+      <View style={[
+        styles.header,
+        {
+          padding: spacing.lg,
+          paddingTop: screenPadding + spacing.lg,
+          backgroundColor: Colors.purple,
+          alignItems: 'center',
+        }
+      ]}>
+        <Text style={[styles.title, { fontSize: titleSize, marginBottom: spacing.xs }]}>
+          My Progress
+        </Text>
+        <Text style={[styles.subtitle, { fontSize: subtitleSize, textAlign: 'center' }]}>
+          Keep reading to grow your tree and pet!
+        </Text>
         {hasUnclaimedRewards && (
-          <View style={styles.rewardBadge}>
-            <Text style={styles.rewardBadgeText}>
+          <View style={[
+            styles.rewardBadge,
+            {
+              paddingHorizontal: spacing.md,
+              paddingVertical: spacing.xs,
+              borderRadius: BorderRadius.full,
+              marginTop: spacing.sm,
+            }
+          ]}>
+            <Text style={[styles.rewardBadgeText, { fontSize: badgeTextSize }]}>
               🎁 {state?.milestones?.filter((m: any) => !m.isClaimed).length} rewards waiting!
             </Text>
           </View>
         )}
         
         {/* Test Controls */}
-        <View style={styles.testControls}>
+        <View style={[styles.testControls, { marginTop: spacing.md, gap: spacing.sm }]}>
           <TouchableOpacity 
-            style={styles.testButton} 
+            style={[
+              styles.testButton,
+              {
+                paddingHorizontal: spacing.sm,
+                paddingVertical: spacing.xs,
+                borderRadius: BorderRadius.md,
+              }
+            ]}
             onPress={() => simulateReadingSession('phonics', 5)}
           >
-            <Text style={styles.testButtonText}>+Phonics (5min)</Text>
+            <Text style={[styles.testButtonText, { fontSize: testButtonTextSize }]}>
+              +Phonics (5min)
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity 
-            style={styles.testButton} 
+            style={[
+              styles.testButton,
+              {
+                paddingHorizontal: spacing.sm,
+                paddingVertical: spacing.xs,
+                borderRadius: BorderRadius.md,
+              }
+            ]}
             onPress={() => simulateReadingSession('story', 10)}
           >
-            <Text style={styles.testButtonText}>+Story (10min)</Text>
+            <Text style={[styles.testButtonText, { fontSize: testButtonTextSize }]}>
+              +Story (10min)
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity 
-            style={styles.testButton} 
+            style={[
+              styles.testButton,
+              {
+                paddingHorizontal: spacing.sm,
+                paddingVertical: spacing.xs,
+                borderRadius: BorderRadius.md,
+              }
+            ]}
             onPress={() => simulateReadingSession('practice', 3)}
           >
-            <Text style={styles.testButtonText}>+Practice (3min)</Text>
+            <Text style={[styles.testButtonText, { fontSize: testButtonTextSize }]}>
+              +Practice (3min)
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
 
       {/* Tab Switcher */}
-      <View style={styles.tabContainer}>
+      <View style={[
+        styles.tabContainer,
+        {
+          flexDirection: 'row',
+          padding: spacing.md,
+          backgroundColor: Colors.cream,
+          gap: spacing.md,
+        }
+      ]}>
         <TouchableOpacity
-          style={[styles.tab, currentTab === 'tree' && styles.tabActive]}
+          style={[
+            styles.tab,
+            {
+              flex: 1,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              paddingVertical: spacing.md,
+              backgroundColor: Colors.white,
+              borderRadius: BorderRadius.lg,
+              borderWidth: 2,
+              borderColor: Colors.border,
+              gap: spacing.sm,
+            },
+            currentTab === 'tree' && styles.tabActive
+          ]}
           onPress={() => setCurrentTab('tree')}
         >
-          <Text style={styles.tabEmoji}>🌳</Text>
-          <Text style={[styles.tabText, currentTab === 'tree' && styles.tabTextActive]}>
+          <Text style={[styles.tabEmoji, { fontSize: tabEmojiSize }]}>🌳</Text>
+          <Text style={[
+            styles.tabText,
+            { fontSize: tabTextSize },
+            currentTab === 'tree' && styles.tabTextActive
+          ]}>
             Fruit Tree
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.tab, currentTab === 'pet' && styles.tabActive]}
+          style={[
+            styles.tab,
+            {
+              flex: 1,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              paddingVertical: spacing.md,
+              backgroundColor: Colors.white,
+              borderRadius: BorderRadius.lg,
+              borderWidth: 2,
+              borderColor: Colors.border,
+              gap: spacing.sm,
+            },
+            currentTab === 'pet' && styles.tabActive
+          ]}
           onPress={() => setCurrentTab('pet')}
         >
-          <Text style={styles.tabEmoji}>🐾</Text>
-          <Text style={[styles.tabText, currentTab === 'pet' && styles.tabTextActive]}>
+          <Text style={[styles.tabEmoji, { fontSize: tabEmojiSize }]}>🐾</Text>
+          <Text style={[
+            styles.tabText,
+            { fontSize: tabTextSize },
+            currentTab === 'pet' && styles.tabTextActive
+          ]}>
             Reading Pet
           </Text>
         </TouchableOpacity>
@@ -116,7 +242,7 @@ function GamificationScreenInner() {
 
       {/* Content */}
       <ScrollView
-        style={styles.content}
+        style={[styles.content, { flex: 1 }]}
         refreshControl={
           <RefreshControl refreshing={isRefreshing} onRefresh={refreshData} />
         }
@@ -153,70 +279,135 @@ function GamificationScreenInner() {
         </Animated.View>
 
         {/* Stats Overview */}
-        <View style={styles.statsGrid}>
-          <View style={[styles.statCard, { backgroundColor: '#EDE9FE' }]}>
-            <Text style={[styles.statValue, { color: '#7C3AED' }]}>{state?.plant?.wordsRead || 0}</Text>
-            <Text style={styles.statLabel}>Words Read</Text>
+        <View style={[
+          styles.statsGrid,
+          {
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            padding: spacing.lg,
+            justifyContent: 'space-between',
+            gap: spacing.md,
+          }
+        ]}>
+          <View style={[
+            styles.statCard,
+            {
+              width: statCardWidth,
+              padding: spacing.lg,
+              borderRadius: BorderRadius.lg,
+              alignItems: 'center',
+              backgroundColor: '#EDE9FE',
+            }
+          ]}>
+            <Text style={[styles.statValue, { color: '#7C3AED', fontSize: statValueSize, marginBottom: spacing.xs }]}>
+              {state?.plant?.wordsRead || 0}
+            </Text>
+            <Text style={[styles.statLabel, { fontSize: statLabelSize }]}>Words Read</Text>
           </View>
-          <View style={[styles.statCard, { backgroundColor: '#FEF3C7' }]}>
-            <Text style={[styles.statValue, { color: '#D97706' }]}>{fruitTreeProgress?.currentStreak || 0}</Text>
-            <Text style={styles.statLabel}>Day Streak</Text>
+          <View style={[
+            styles.statCard,
+            {
+              width: statCardWidth,
+              padding: spacing.lg,
+              borderRadius: BorderRadius.lg,
+              alignItems: 'center',
+              backgroundColor: '#FEF3C7',
+            }
+          ]}>
+            <Text style={[styles.statValue, { color: '#D97706', fontSize: statValueSize, marginBottom: spacing.xs }]}>
+              {fruitTreeProgress?.currentStreak || 0}
+            </Text>
+            <Text style={[styles.statLabel, { fontSize: statLabelSize }]}>Day Streak</Text>
           </View>
-          <View style={[styles.statCard, { backgroundColor: '#D1FAE5' }]}>
-            <Text style={[styles.statValue, { color: '#059669' }]}>{state?.totalUnlocked || 0}</Text>
-            <Text style={styles.statLabel}>Achievements</Text>
+          <View style={[
+            styles.statCard,
+            {
+              width: statCardWidth,
+              padding: spacing.lg,
+              borderRadius: BorderRadius.lg,
+              alignItems: 'center',
+              backgroundColor: '#D1FAE5',
+            }
+          ]}>
+            <Text style={[styles.statValue, { color: '#059669', fontSize: statValueSize, marginBottom: spacing.xs }]}>
+              {state?.totalUnlocked || 0}
+            </Text>
+            <Text style={[styles.statLabel, { fontSize: statLabelSize }]}>Achievements</Text>
           </View>
-          <View style={[styles.statCard, { backgroundColor: '#FEE2E2' }]}>
-            <Text style={[styles.statValue, { color: '#DC2626' }]}>{state?.plant?.sessionsCompleted || 0}</Text>
-            <Text style={styles.statLabel}>Sessions Done</Text>
+          <View style={[
+            styles.statCard,
+            {
+              width: statCardWidth,
+              padding: spacing.lg,
+              borderRadius: BorderRadius.lg,
+              alignItems: 'center',
+              backgroundColor: '#FEE2E2',
+            }
+          ]}>
+            <Text style={[styles.statValue, { color: '#DC2626', fontSize: statValueSize, marginBottom: spacing.xs }]}>
+              {state?.plant?.sessionsCompleted || 0}
+            </Text>
+            <Text style={[styles.statLabel, { fontSize: statLabelSize }]}>Sessions Done</Text>
           </View>
         </View>
 
         {/* Skill Progress */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Skill Progress</Text>
-          <View style={styles.skillItem}>
-            <View style={styles.skillHeader}>
-              <Text style={styles.skillName}>Letter Recognition</Text>
-              <Text style={[styles.skillPercent, { color: '#7C3AED' }]}>85%</Text>
+        <View style={[styles.section, { padding: spacing.lg }]}>
+          <Text style={[styles.sectionTitle, { fontSize: sectionTitleSize, marginBottom: spacing.md }]}>
+            Skill Progress
+          </Text>
+          <View style={[styles.skillItem, { marginBottom: spacing.md }]}>
+            <View style={[styles.skillHeader, { flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.xs }]}>
+              <Text style={[styles.skillName, { fontSize: skillNameSize }]}>Letter Recognition</Text>
+              <Text style={[styles.skillPercent, { fontSize: skillPercentSize, color: '#7C3AED' }]}>85%</Text>
             </View>
-            <View style={styles.progressBar}>
-              <View style={[styles.progressFill, { width: '85%', backgroundColor: '#7C3AED' }]} />
-            </View>
-          </View>
-          <View style={styles.skillItem}>
-            <View style={styles.skillHeader}>
-              <Text style={styles.skillName}>Sound Blending</Text>
-              <Text style={[styles.skillPercent, { color: '#10B981' }]}>60%</Text>
-            </View>
-            <View style={styles.progressBar}>
-              <View style={[styles.progressFill, { width: '60%', backgroundColor: '#10B981' }]} />
+            <View style={[styles.progressBar, { height: progressBarHeight, backgroundColor: '#E5E7EB', borderRadius: BorderRadius.full, overflow: 'hidden' }]}>
+              <View style={[styles.progressFill, { height: '100%', width: '85%', backgroundColor: '#7C3AED', borderRadius: BorderRadius.full }]} />
             </View>
           </View>
-          <View style={styles.skillItem}>
-            <View style={styles.skillHeader}>
-              <Text style={styles.skillName}>Syllable Awareness</Text>
-              <Text style={[styles.skillPercent, { color: '#EC4899' }]}>40%</Text>
+          <View style={[styles.skillItem, { marginBottom: spacing.md }]}>
+            <View style={[styles.skillHeader, { flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.xs }]}>
+              <Text style={[styles.skillName, { fontSize: skillNameSize }]}>Sound Blending</Text>
+              <Text style={[styles.skillPercent, { fontSize: skillPercentSize, color: '#10B981' }]}>60%</Text>
             </View>
-            <View style={styles.progressBar}>
-              <View style={[styles.progressFill, { width: '40%', backgroundColor: '#EC4899' }]} />
+            <View style={[styles.progressBar, { height: progressBarHeight, backgroundColor: '#E5E7EB', borderRadius: BorderRadius.full, overflow: 'hidden' }]}>
+              <View style={[styles.progressFill, { height: '100%', width: '60%', backgroundColor: '#10B981', borderRadius: BorderRadius.full }]} />
             </View>
           </View>
-          <View style={styles.skillItem}>
-            <View style={styles.skillHeader}>
-              <Text style={styles.skillName}>Reading Fluency</Text>
-              <Text style={[styles.skillPercent, { color: '#D97706' }]}>55%</Text>
+          <View style={[styles.skillItem, { marginBottom: spacing.md }]}>
+            <View style={[styles.skillHeader, { flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.xs }]}>
+              <Text style={[styles.skillName, { fontSize: skillNameSize }]}>Syllable Awareness</Text>
+              <Text style={[styles.skillPercent, { fontSize: skillPercentSize, color: '#EC4899' }]}>40%</Text>
             </View>
-            <View style={styles.progressBar}>
-              <View style={[styles.progressFill, { width: '55%', backgroundColor: '#D97706' }]} />
+            <View style={[styles.progressBar, { height: progressBarHeight, backgroundColor: '#E5E7EB', borderRadius: BorderRadius.full, overflow: 'hidden' }]}>
+              <View style={[styles.progressFill, { height: '100%', width: '40%', backgroundColor: '#EC4899', borderRadius: BorderRadius.full }]} />
+            </View>
+          </View>
+          <View style={[styles.skillItem, { marginBottom: spacing.md }]}>
+            <View style={[styles.skillHeader, { flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.xs }]}>
+              <Text style={[styles.skillName, { fontSize: skillNameSize }]}>Reading Fluency</Text>
+              <Text style={[styles.skillPercent, { fontSize: skillPercentSize, color: '#D97706' }]}>55%</Text>
+            </View>
+            <View style={[styles.progressBar, { height: progressBarHeight, backgroundColor: '#E5E7EB', borderRadius: BorderRadius.full, overflow: 'hidden' }]}>
+              <View style={[styles.progressFill, { height: '100%', width: '55%', backgroundColor: '#D97706', borderRadius: BorderRadius.full }]} />
             </View>
           </View>
         </View>
 
         {/* Badges Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Badges</Text>
-          <View style={styles.badgesGrid}>
+        <View style={[styles.section, { padding: spacing.lg }]}>
+          <Text style={[styles.sectionTitle, { fontSize: sectionTitleSize, marginBottom: spacing.md }]}>
+            Badges
+          </Text>
+          <View style={[
+            styles.badgesGrid,
+            {
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              gap: spacing.md,
+              justifyContent: 'flex-start',
+            }
+          ]}>
             {[
               { icon: '🏅', name: 'First Word', earned: true },
               { icon: '🔥', name: '7-Day Streak', earned: true },
@@ -225,11 +416,31 @@ function GamificationScreenInner() {
               { icon: '📖', name: 'Story Finisher', earned: false },
               { icon: '🔤', name: 'Super Speller', earned: false },
             ].map((badge, index) => (
-              <View key={index} style={[styles.badgeItem, !badge.earned && styles.badgeLocked]}>
-                <View style={styles.badgeIcon}>
-                  <Text style={styles.badgeEmoji}>{badge.icon}</Text>
+              <View 
+                key={index} 
+                style={[
+                  styles.badgeItem, 
+                  { width: badgeWidth, alignItems: 'center', marginBottom: spacing.md },
+                  !badge.earned && styles.badgeLocked
+                ]}
+              >
+                <View style={[
+                  styles.badgeIcon,
+                  {
+                    width: badgeIconSize,
+                    height: badgeIconSize,
+                    borderRadius: badgeIconSize / 2,
+                    backgroundColor: Colors.cream,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    marginBottom: spacing.xs,
+                  }
+                ]}>
+                  <Text style={[styles.badgeEmoji, { fontSize: badgeEmojiSize }]}>{badge.icon}</Text>
                 </View>
-                <Text style={styles.badgeName}>{badge.name}</Text>
+                <Text style={[styles.badgeName, { fontSize: badgeNameSize, textAlign: 'center' }]}>
+                  {badge.name}
+                </Text>
               </View>
             ))}
           </View>
@@ -237,19 +448,49 @@ function GamificationScreenInner() {
 
         {/* Achievements Section */}
         {state?.achievements && state.achievements.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>🏆 Achievements</Text>
-            <View style={styles.achievementsList}>
+          <View style={[styles.section, { padding: spacing.lg }]}>
+            <Text style={[styles.sectionTitle, { fontSize: sectionTitleSize, marginBottom: spacing.md }]}>
+              🏆 Achievements
+            </Text>
+            <View style={[styles.achievementsList, { gap: spacing.md }]}>
               {state.achievements.slice(0, 5).map((achievement: any) => (
-                <View key={achievement.id} style={styles.achievementCard}>
-                  <Text style={styles.achievementIcon}>{achievement.icon}</Text>
-                  <View style={styles.achievementInfo}>
-                    <Text style={styles.achievementName}>{achievement.name}</Text>
-                    <Text style={styles.achievementDesc}>{achievement.description}</Text>
+                <View 
+                  key={achievement.id} 
+                  style={[
+                    styles.achievementCard,
+                    {
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      backgroundColor: Colors.white,
+                      padding: spacing.md,
+                      borderRadius: BorderRadius.lg,
+                    }
+                  ]}
+                >
+                  <Text style={[styles.achievementIcon, { fontSize: achievementIconSize, marginRight: spacing.md }]}>
+                    {achievement.icon}
+                  </Text>
+                  <View style={[styles.achievementInfo, { flex: 1 }]}>
+                    <Text style={[styles.achievementName, { fontSize: achievementNameSize, marginBottom: 2 }]}>
+                      {achievement.name}
+                    </Text>
+                    <Text style={[styles.achievementDesc, { fontSize: achievementDescSize }]}>
+                      {achievement.description}
+                    </Text>
                   </View>
                   {achievement.isUnlocked && (
-                    <View style={styles.unlockedBadge}>
-                      <Text style={styles.unlockedText}>✓</Text>
+                    <View style={[
+                      styles.unlockedBadge,
+                      {
+                        width: unlockedBadgeSize,
+                        height: unlockedBadgeSize,
+                        borderRadius: unlockedBadgeSize / 2,
+                        backgroundColor: '#4CAF50',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                      }
+                    ]}>
+                      <Text style={[styles.unlockedText, { fontSize: unlockedBadgeSize * 0.5 }]}>✓</Text>
                     </View>
                   )}
                 </View>
@@ -307,227 +548,172 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: Colors.cream,
+    // backgroundColor handled dynamically
   },
   loadingText: {
-    marginTop: Spacing.lg,
-    fontSize: FontSize.md,
     color: Colors.textSecondary,
     fontWeight: '500',
+    // marginTop, fontSize handled dynamically
   },
   header: {
-    padding: Spacing.lg,
-    paddingTop: Spacing.screen,
-    backgroundColor: Colors.purple,
-    alignItems: 'center',
+    // padding, paddingTop, backgroundColor, alignItems handled dynamically
   },
   title: {
-    fontSize: FontSize.xxl,
     fontWeight: '800',
     color: Colors.white,
-    marginBottom: Spacing.xs,
+    // fontSize, marginBottom handled dynamically
   },
   subtitle: {
-    fontSize: FontSize.md,
     color: Colors.white + 'CC',
-    textAlign: 'center',
+    // fontSize, textAlign handled dynamically
   },
   rewardBadge: {
     backgroundColor: '#FFF3E0',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
-    borderRadius: BorderRadius.full,
-    marginTop: Spacing.sm,
+    // paddingHorizontal, paddingVertical, borderRadius, marginTop handled dynamically
   },
   rewardBadgeText: {
-    fontSize: FontSize.sm,
     fontWeight: '700',
     color: '#FF9800',
+    // fontSize handled dynamically
   },
   tabContainer: {
-    flexDirection: 'row',
-    padding: Spacing.md,
-    backgroundColor: Colors.cream,
-    gap: Spacing.md,
+    // flexDirection, padding, backgroundColor, gap handled dynamically
   },
   tab: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: Spacing.md,
-    backgroundColor: Colors.white,
-    borderRadius: BorderRadius.lg,
-    borderWidth: 2,
-    borderColor: Colors.border,
-    gap: Spacing.sm,
+    // flex, flexDirection, alignItems, justifyContent, paddingVertical, backgroundColor, 
+    // borderRadius, borderWidth, borderColor, gap handled dynamically
   },
   tabActive: {
     backgroundColor: Colors.purple,
     borderColor: Colors.purple,
   },
   tabEmoji: {
-    fontSize: 20,
+    // fontSize handled dynamically
   },
   tabText: {
-    fontSize: FontSize.md,
     fontWeight: '700',
     color: Colors.textPrimary,
+    // fontSize handled dynamically
   },
   tabTextActive: {
     color: Colors.white,
   },
   content: {
-    flex: 1,
+    // flex handled dynamically
   },
   section: {
-    padding: Spacing.lg,
+    // padding handled dynamically
   },
   sectionTitle: {
-    fontSize: FontSize.lg,
     fontWeight: '800',
     color: Colors.textPrimary,
-    marginBottom: Spacing.md,
+    // fontSize, marginBottom handled dynamically
   },
   achievementsList: {
-    gap: Spacing.md,
+    // gap handled dynamically
   },
   achievementCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.white,
-    padding: Spacing.md,
-    borderRadius: BorderRadius.lg,
     ...Shadow.sm,
+    // flexDirection, alignItems, backgroundColor, padding, borderRadius handled dynamically
   },
   achievementIcon: {
-    fontSize: 32,
-    marginRight: Spacing.md,
+    // fontSize, marginRight handled dynamically
   },
   achievementInfo: {
-    flex: 1,
+    // flex handled dynamically
   },
   achievementName: {
-    fontSize: FontSize.md,
     fontWeight: '700',
     color: Colors.textPrimary,
-    marginBottom: 2,
+    // fontSize, marginBottom handled dynamically
   },
   achievementDesc: {
-    fontSize: FontSize.sm,
     color: Colors.textSecondary,
+    // fontSize handled dynamically
   },
   unlockedBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#4CAF50',
-    justifyContent: 'center',
-    alignItems: 'center',
+    // width, height, borderRadius, backgroundColor, justifyContent, alignItems handled dynamically
   },
   unlockedText: {
     color: Colors.white,
-    fontSize: 14,
     fontWeight: '800',
+    // fontSize handled dynamically
   },
   statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    padding: Spacing.lg,
-    justifyContent: 'space-between',
+    // flexDirection, flexWrap, padding, justifyContent, gap handled dynamically
   },
   statCard: {
-    width: '48%',
-    padding: Spacing.lg,
-    borderRadius: BorderRadius.lg,
-    alignItems: 'center',
-    marginBottom: Spacing.md,
+    // width, padding, borderRadius, alignItems, backgroundColor handled dynamically
   },
   statValue: {
-    fontSize: FontSize.xxl,
     fontWeight: '800',
-    marginBottom: Spacing.xs,
+    // color, fontSize, marginBottom handled dynamically
   },
   statLabel: {
-    fontSize: FontSize.sm,
     color: Colors.textSecondary,
+    // fontSize handled dynamically
   },
   skillItem: {
-    marginBottom: Spacing.md,
+    // marginBottom handled dynamically
   },
   skillHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: Spacing.xs,
+    // marginBottom handled dynamically
   },
   skillName: {
-    fontSize: FontSize.md,
     fontWeight: '600',
     color: Colors.textPrimary,
+    // fontSize handled dynamically
   },
   skillPercent: {
-    fontSize: FontSize.md,
     fontWeight: '700',
+    // fontSize handled dynamically
   },
   progressBar: {
-    height: 10,
-    backgroundColor: '#E5E7EB',
-    borderRadius: BorderRadius.full,
-    overflow: 'hidden',
+    // height, backgroundColor, borderRadius, overflow handled dynamically
   },
   progressFill: {
-    height: '100%',
-    borderRadius: BorderRadius.full,
+    // height, borderRadius handled dynamically
   },
   badgesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.md,
-    justifyContent: 'space-between',
+    // flexDirection, flexWrap, gap, justifyContent handled dynamically
   },
   badgeItem: {
-    width: '30%',
-    alignItems: 'center',
-    marginBottom: Spacing.md,
+    // width, alignItems, marginBottom handled dynamically
   },
   badgeLocked: {
     opacity: 0.5,
   },
   badgeIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
     backgroundColor: Colors.cream,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: Spacing.xs,
+    // width, height, borderRadius, marginBottom handled dynamically
   },
   badgeEmoji: {
-    fontSize: 32,
+    // fontSize handled dynamically
   },
   badgeName: {
-    fontSize: FontSize.sm,
     fontWeight: '600',
     color: Colors.textSecondary,
     textAlign: 'center',
+    // fontSize handled dynamically
   },
   testControls: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginTop: Spacing.md,
-    gap: Spacing.sm,
+    // marginTop, gap handled dynamically
   },
   testButton: {
     backgroundColor: Colors.white,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-    borderRadius: BorderRadius.md,
     borderWidth: 1,
     borderColor: Colors.purple,
+    // paddingHorizontal, paddingVertical, borderRadius handled dynamically
   },
   testButtonText: {
-    fontSize: FontSize.xs,
     fontWeight: '600',
     color: Colors.purple,
+    // fontSize handled dynamically
   },
 });

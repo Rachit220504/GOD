@@ -4,13 +4,13 @@ import {
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { HomeStackParamList, Story } from '../../types';
-import { Colors, FontSize, Spacing, BorderRadius, Shadow } from '../../constants/theme';
+import { Colors, Spacing, BorderRadius, Shadow } from '../../constants/theme';
 import { SafeScreen } from '../../components/common/SafeScreen';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { contentApi } from '../../services/api';
-import { isTablet, centeredContent, SCREEN_PADDING } from '../../utils/responsive';
+import { useResponsiveLayout } from '../../utils/responsiveHelpers';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'StoryDetail'>;
 
@@ -25,6 +25,20 @@ export function StoryDetailScreen({ route, navigation }: Props) {
   const { storyId } = route.params;
   const [story, setStory] = useState<Story | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Responsive layout
+  const { spacing, mScale, screenPadding, centeredContent, isTablet } = useResponsiveLayout();
+  
+  // Responsive font sizes
+  const backTextSize = mScale(16, 0.3);
+  const heroEmojiSize = mScale(48, 0.4);
+  const heroTitleSize = mScale(isTablet ? 28 : 24, 0.35);
+  const heroBadgeSize = mScale(14, 0.3);
+  const tagTextSize = mScale(14, 0.3);
+  const sectionTitleSize = mScale(20, 0.3);
+  const previewTextSize = mScale(16, 0.3);
+  const cardTitleSize = mScale(18, 0.3);
+  const cardTextSize = mScale(14, 0.3);
 
   useEffect(() => {
     const load = async () => {
@@ -49,31 +63,42 @@ export function StoryDetailScreen({ route, navigation }: Props) {
     <SafeScreen scrollable withPadding={false}>
       {/* Back */}
       <TouchableOpacity
-        style={styles.backBtn}
+        style={[styles.backBtn, { paddingVertical: spacing.sm, marginBottom: spacing.xs }]}
         onPress={() => navigation.goBack()}
         accessibilityRole="button"
         accessibilityLabel="Go back"
       >
-        <Text style={styles.backText}>← Back</Text>
+        <Text style={[styles.backText, { fontSize: backTextSize }]}>← Back</Text>
       </TouchableOpacity>
 
       {/* On tablet: cap and centre all content */}
       <View style={isTablet ? [styles.tabletWrapper, centeredContent] : undefined}>
         {/* Hero */}
-        <View style={[styles.hero, { backgroundColor: LEVEL_BG[story.readingLevel] ?? Colors.softBlue }]}>
-          <Text style={styles.heroEmoji}>📖</Text>
-          <Text style={styles.heroTitle}>{story.title}</Text>
-          <View style={styles.heroMeta}>
-            <Text style={styles.heroBadge}>{story.readingLevel}</Text>
-            <Text style={styles.heroBadge}>⏱ {story.estimatedMins} min</Text>
-            <Text style={styles.heroBadge}>📝 {story.wordCount} words</Text>
+        <View style={[
+          styles.hero, 
+          { 
+            backgroundColor: LEVEL_BG[story.readingLevel] ?? Colors.softBlue,
+            paddingVertical: spacing.xl,
+            paddingHorizontal: spacing.lg,
+            gap: spacing.md,
+          }
+        ]}>
+          <Text style={[styles.heroEmoji, { fontSize: heroEmojiSize }]}>📖</Text>
+          <Text style={[styles.heroTitle, { fontSize: heroTitleSize }]}>{story.title}</Text>
+          <View style={[styles.heroMeta, { gap: spacing.sm }]}>
+            <Text style={[styles.heroBadge, { fontSize: heroBadgeSize }]}>{story.readingLevel}</Text>
+            <Text style={[styles.heroBadge, { fontSize: heroBadgeSize }]}>⏱ {story.estimatedMins} min</Text>
+            <Text style={[styles.heroBadge, { fontSize: heroBadgeSize }]}>📝 {story.wordCount} words</Text>
           </View>
           {story.tags.length > 0 && (
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              <View style={styles.tagsRow}>
+              <View style={[styles.tagsRow, { gap: spacing.sm, marginTop: spacing.sm }]}>
                 {story.tags.map((t) => (
-                  <View key={t} style={styles.tag}>
-                    <Text style={styles.tagText}>{t}</Text>
+                  <View key={t} style={[
+                    styles.tag,
+                    { paddingHorizontal: spacing.md, paddingVertical: spacing.xs }
+                  ]}>
+                    <Text style={[styles.tagText, { fontSize: tagTextSize }]}>{t}</Text>
                   </View>
                 ))}
               </View>
@@ -123,67 +148,75 @@ export function StoryDetailScreen({ route, navigation }: Props) {
 
 const styles = StyleSheet.create({
   backBtn: {
-    paddingHorizontal: SCREEN_PADDING,
-    paddingVertical: Spacing.md,
+    // paddingHorizontal handled dynamically via screenPadding in inline styles
+    // paddingVertical handled dynamically
   },
-  backText: { fontSize: FontSize.md, color: Colors.purple, fontWeight: '600' },
+  backText: { color: Colors.purple, fontWeight: '600' },
   tabletWrapper: {
     overflow: 'hidden',
     borderRadius: 0,
   },
   hero: {
-    padding: Spacing.xl,
-    paddingBottom: Spacing.xxl,
-    gap: Spacing.md,
     alignItems: 'center',
+    // paddingVertical, paddingHorizontal, gap handled dynamically
   },
-  heroEmoji: { fontSize: 56 },
+  heroEmoji: {
+    // fontSize handled dynamically
+  },
   heroTitle: {
-    fontSize: FontSize.xxl,
     fontWeight: '800',
     color: Colors.textPrimary,
     textAlign: 'center',
     letterSpacing: -0.5,
-    lineHeight: 32,
+    // fontSize, lineHeight handled dynamically
   },
-  heroMeta: { flexDirection: 'row', gap: Spacing.sm, flexWrap: 'wrap', justifyContent: 'center' },
+  heroMeta: { 
+    flexDirection: 'row', 
+    flexWrap: 'wrap', 
+    justifyContent: 'center',
+    // gap handled dynamically
+  },
   heroBadge: {
-    fontSize: FontSize.sm,
     fontWeight: '600',
     backgroundColor: 'rgba(255,255,255,0.7)',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 4,
     borderRadius: BorderRadius.full,
     color: Colors.textPrimary,
+    // fontSize, paddingHorizontal, paddingVertical handled dynamically
   },
-  tagsRow: { flexDirection: 'row', gap: Spacing.xs, paddingTop: Spacing.xs },
+  tagsRow: { 
+    flexDirection: 'row',
+    // gap, paddingTop handled dynamically
+  },
   tag: {
     backgroundColor: 'rgba(108,92,231,0.1)',
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 3,
     borderRadius: BorderRadius.sm,
+    // paddingHorizontal, paddingVertical handled dynamically
   },
-  tagText: { fontSize: FontSize.xs, color: Colors.purple, fontWeight: '600' },
+  tagText: { color: Colors.purple, fontWeight: '600' },
   content: {
-    padding: Spacing.screen,
-    gap: Spacing.md,
+    // padding, gap handled dynamically
   },
-  previewCard: { gap: Spacing.sm },
+  previewCard: { 
+    // gap handled dynamically
+  },
   previewLabel: {
-    fontSize: FontSize.sm,
     fontWeight: '700',
     color: Colors.textSecondary,
     letterSpacing: 0.5,
     textTransform: 'uppercase',
+    // fontSize handled dynamically
   },
   previewText: {
-    fontSize: FontSize.md,
     color: Colors.textPrimary,
-    lineHeight: 26,
     letterSpacing: 0.3,
+    // fontSize, lineHeight handled dynamically
   },
-  infoCard: { gap: Spacing.sm },
-  infoTitle: { fontSize: FontSize.md, fontWeight: '700', color: Colors.textPrimary },
-  infoText: { fontSize: FontSize.sm, color: Colors.textSecondary, lineHeight: 22, letterSpacing: 0.2 },
-  readBtn: { marginTop: Spacing.sm },
+  infoCard: { 
+    // gap handled dynamically
+  },
+  infoTitle: { fontWeight: '700', color: Colors.textPrimary },
+  infoText: { color: Colors.textSecondary, letterSpacing: 0.2 },
+  readBtn: { 
+    // marginTop handled dynamically
+  },
 });

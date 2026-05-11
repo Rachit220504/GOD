@@ -95,17 +95,7 @@ export async function authenticate(
       throw jwtError;
     }
 
-    // Verify user still exists and is active
-    const user = await prisma.user.findUnique({
-      where: { id: payload.sub },
-      select: { id: true, email: true, role: true, isActive: true },
-    });
-
-    if (!user || !user.isActive) {
-      throw new AppError('User account not found or has been deactivated.', 401);
-    }
-
-    req.user = { id: user.id, email: user.email, role: user.role };
+    req.user = { id: payload.sub, email: payload.email, role: payload.role };
     next();
   } catch (error) {
     next(error);

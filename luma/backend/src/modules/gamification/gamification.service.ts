@@ -211,44 +211,62 @@ export class GamificationService {
     try {
       const finalXP = Math.round(xpEarned * multiplier);
       
-      // Record XP history
-      await prisma.xPHistory.create({
-        data: {
-          userId,
-          xpEarned: finalXP,
-          source,
-          sourceId,
-          multiplier,
-        },
-      });
+      await prisma.$transaction(async (tx) => {
+        // Record XP history
+        await tx.xPHistory.create({
+          data: {
+            userId,
+            xpEarned: finalXP,
+            source,
+            sourceId,
+            multiplier,
+          },
+        });
 
-      // Update plant progress
-      const plant = await this.getOrCreatePlantProgress(userId);
-      const newTotalXP = plant.totalXP + finalXP;
-      const newStage = this.calculatePlantStage(newTotalXP);
-      const leveledUp = newStage !== plant.currentStage;
+        // Update plant progress
+        let plant = await tx.plantProgress.findUnique({
+          where: { userId },
+        });
 
-      await prisma.plantProgress.update({
-        where: { userId },
-        data: {
-          totalXP: newTotalXP,
-          currentXP: plant.currentXP + finalXP,
-          currentStage: newStage,
-          level: Math.floor(newTotalXP / 100) + 1,
-          lastGrowthAt: leveledUp ? new Date() : plant.lastGrowthAt,
-        },
-      });
+        if (!plant) {
+          plant = await tx.plantProgress.create({
+            data: {
+              userId,
+              currentStage: PlantStage.SEED,
+              currentXP: 0,
+              totalXP: 0,
+              level: 1,
+              decorations: [],
+            },
+          });
+        }
 
-      if (leveledUp) {
-        await this.checkAchievements(userId, newTotalXP);
-        logger.info(`User ${userId} plant grew to ${newStage}!`);
-      }
+        const newTotalXP = plant.totalXP + finalXP;
+        const newStage = this.calculatePlantStage(newTotalXP);
+        const leveledUp = newStage !== plant.currentStage;
 
-      // Update daily goals
-      await this.updateDailyGoals(userId, {
-        wordsRead: source === 'reading_session' ? 50 : 0, // Estimate words read
-        minutesRead: source === 'reading_session' ? 15 : 0, // Estimate time
-        sessionsCompleted: source === 'reading_session' ? 1 : 0,
+        await tx.plantProgress.update({
+          where: { userId },
+          data: {
+            totalXP: newTotalXP,
+            currentXP: plant.currentXP + finalXP,
+            currentStage: newStage,
+            level: Math.floor(newTotalXP / 100) + 1,
+            lastGrowthAt: leveledUp ? new Date() : plant.lastGrowthAt,
+          },
+        });
+
+        if (leveledUp) {
+          await this.checkAchievements(userId, newTotalXP, tx);
+          logger.info(`User ${userId} plant grew to ${newStage}!`);
+        }
+
+        // Update daily goals
+        await this.updateDailyGoals(userId, {
+          wordsRead: source === 'reading_session' ? 50 : 0, // Estimate words read
+          minutesRead: source === 'reading_session' ? 15 : 0, // Estimate time
+          sessionsCompleted: source === 'reading_session' ? 1 : 0,
+        }, tx);
       });
 
     } catch (error) {
@@ -310,11 +328,11 @@ export class GamificationService {
       currentXP: plant.currentXP,
       totalXP: plant.totalXP,
       level: plant.level,
-      plantVariant: plant.plantVariant,
+      plantVariant: plant.plantVariant ?? undefined,
       decorations: plant.decorations,
       wordsRead: plant.wordsRead,
       sessionsCompleted: plant.sessionsCompleted,
-      lastGrowthAt: plant.lastGrowthAt,
+      lastGrowthAt: plant.lastGrowthAt ?? undefined,
       progressToNext,
       nextStage: nextStageConfig?.nextStage || plant.currentStage,
     };
@@ -355,21 +373,21 @@ export class GamificationService {
   /**
    * Check and unlock achievements based on user progress
    */
-  async checkAchievements(userId: string, totalXP: number): Promise<void> {
-    const userStats = await prisma.user.findUnique({
+  async checkAchievements(userId: string, totalXP: number, txClient: any = prisma): Promise<void> {
+    const userStats = await txClient.user.findUnique({
       where: { id: userId },
       include: { profile: true },
     });
 
     if (!userStats?.profile) return;
 
-    const achievements = await prisma.achievement.findMany({
+    const achievements = await txClient.achievement.findMany({
       where: { isActive: true },
     });
 
     for (const achievement of achievements) {
       // Skip if already unlocked
-      const alreadyUnlocked = await prisma.userAchievement.findUnique({
+      const alreadyUnlocked = await txClient.userAchievement.findUnique({
         where: {
           userId_achievementId: { userId, achievementId: achievement.id },
         },
@@ -391,7 +409,7 @@ export class GamificationService {
       }
 
       // Check session-based achievements
-      const recentSession = await prisma.sessionProgress.findFirst({
+      const recentSession = await txClient.sessionProgress.findFirst({
         where: { userId },
         orderBy: { startedAt: 'desc' },
       });
@@ -404,7 +422,7 @@ export class GamificationService {
       }
 
       if (shouldUnlock) {
-        await prisma.userAchievement.create({
+        await txClient.userAchievement.create({
           data: {
             userId,
             achievementId: achievement.id,
@@ -501,12 +519,13 @@ export class GamificationService {
    */
   private async updateDailyGoals(
     userId: string,
-    progress: { wordsRead?: number; minutesRead?: number; sessionsCompleted?: number }
+    progress: { wordsRead?: number; minutesRead?: number; sessionsCompleted?: number },
+    txClient: any = prisma
   ): Promise<void> {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const goal = await prisma.dailyGoal.upsert({
+    const goal = await txClient.dailyGoal.upsert({
       where: {
         userId_date: { userId, date: today },
       },
@@ -543,7 +562,7 @@ export class GamificationService {
       id: entry.id,
       xpEarned: entry.xpEarned,
       source: entry.source,
-      sourceId: entry.sourceId,
+      sourceId: entry.sourceId ?? undefined,
       multiplier: entry.multiplier,
       createdAt: entry.createdAt,
     }));
@@ -552,11 +571,11 @@ export class GamificationService {
   /**
    * Calculate next milestone for user
    */
-  private calculateNextMilestone(plant: any): any {
-    const currentStageConfig = PLANT_STAGES[plant.currentStage];
+  private calculateNextMilestone(plant: PlantProgressResponse): any {
+    const currentStageConfig = PLANT_STAGES[plant.currentStage as PlantStage];
     if (!currentStageConfig.nextStage) return null;
 
-    const nextStageConfig = PLANT_STAGES[currentStageConfig.nextStage];
+    const nextStageConfig = PLANT_STAGES[currentStageConfig.nextStage as PlantStage];
     const progressInStage = plant.currentXP - currentStageConfig.xpRequired;
     const stageRange = nextStageConfig.xpRequired - currentStageConfig.xpRequired;
 

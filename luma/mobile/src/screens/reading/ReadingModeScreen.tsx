@@ -3,7 +3,7 @@ import React, {
 } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Modal, Animated, Alert, Dimensions,
+  Modal, Animated, Alert,
 } from 'react-native';
 import * as Speech from 'expo-speech';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -15,11 +15,9 @@ import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { useReadingComfort } from '../../contexts/ReadingComfortContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { contentApi, progressApi } from '../../services/api';
-import { isTablet, centeredContent, SCREEN_PADDING } from '../../utils/responsive';
+import { useResponsiveLayout } from '../../utils/responsiveHelpers';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'ReadingMode'>;
-
-const SCREEN_W = Dimensions.get('window').width;
 
 // ─── Word Breakdown Sheet ─────────────────────────────────────────────────────
 
@@ -34,11 +32,12 @@ const WordBreakdownSheet = memo(function WordBreakdownSheet({
   visible: boolean;
   onClose: () => void;
 }) {
-  const slideAnim = useRef(new Animated.Value(320)).current;
+  const { spacing, mScale, wp, isTablet } = useResponsiveLayout();
+  const slideAnim = useRef(new Animated.Value(400)).current;
 
   useEffect(() => {
     Animated.spring(slideAnim, {
-      toValue: visible ? 0 : 320,
+      toValue: visible ? 0 : 400,
       useNativeDriver: true,
       damping: 18,
       stiffness: 200,
@@ -58,38 +57,90 @@ const WordBreakdownSheet = memo(function WordBreakdownSheet({
 
   if (!entry) return null;
 
+  // Responsive sizing
+  const titleSize = mScale(18, 0.3);
+  const wordDisplaySize = mScale(42, 0.4);
+  const syllableTextSize = mScale(24, 0.35);
+  const buttonTextSize = mScale(16, 0.3);
+  const closeButtonSize = mScale(32, 0.2);
+  const closeIconSize = mScale(16, 0.2);
+  const sheetPadding = spacing.xl;
+  const syllableBoxMaxWidth = isTablet ? 200 : wp(40);
+
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
       <TouchableOpacity style={wb.overlay} onPress={onClose} activeOpacity={1}>
         <Animated.View
-          style={[wb.sheet, { transform: [{ translateY: slideAnim }] }]}
+          style={[
+            wb.sheet,
+            { 
+              transform: [{ translateY: slideAnim }],
+              padding: sheetPadding,
+              paddingBottom: spacing.xxl,
+            }
+          ]}
         >
           <TouchableOpacity activeOpacity={1}>
             {/* Close button */}
-            <TouchableOpacity style={wb.closeButton} onPress={onClose}>
-              <Text style={wb.closeIcon}>✕</Text>
+            <TouchableOpacity 
+              style={[
+                wb.closeButton,
+                {
+                  width: closeButtonSize,
+                  height: closeButtonSize,
+                  borderRadius: closeButtonSize / 2,
+                  top: spacing.lg,
+                  right: spacing.lg,
+                }
+              ]} 
+              onPress={onClose}
+            >
+              <Text style={[wb.closeIcon, { fontSize: closeIconSize }]}>✕</Text>
             </TouchableOpacity>
 
-            <Text style={wb.title}>Word Breakdown</Text>
+            <Text style={[wb.title, { fontSize: titleSize, marginBottom: spacing.xl }]}>
+              Word Breakdown
+            </Text>
 
             {/* Large word display */}
-            <Text style={wb.wordDisplay}>{entry.word}</Text>
+            <Text style={[wb.wordDisplay, { fontSize: wordDisplaySize, marginBottom: spacing.xl }]}>
+              {entry.word}
+            </Text>
 
             {/* Syllable boxes side by side */}
-            <View style={wb.syllableRow}>
+            <View style={[wb.syllableRow, { gap: spacing.md, marginBottom: spacing.xl }]}>
               {entry.syllables.slice(0, 2).map((syl, i) => (
                 <View
                   key={i}
-                  style={[wb.syllableBox, { backgroundColor: SYLLABLE_COLORS[i % SYLLABLE_COLORS.length] }]}
+                  style={[
+                    wb.syllableBox,
+                    { 
+                      backgroundColor: SYLLABLE_COLORS[i % SYLLABLE_COLORS.length],
+                      maxWidth: syllableBoxMaxWidth,
+                      paddingVertical: spacing.lg,
+                      paddingHorizontal: spacing.xl,
+                      borderRadius: 16,
+                    }
+                  ]}
                 >
-                  <Text style={i === 0 ? wb.syllableTextPurple : wb.syllableTextGreen}>{syl}</Text>
+                  <Text style={[
+                    i === 0 ? wb.syllableTextPurple : wb.syllableTextGreen,
+                    { fontSize: syllableTextSize }
+                  ]}>
+                    {syl}
+                  </Text>
                 </View>
               ))}
             </View>
 
             {/* Hear it slowly button */}
-            <TouchableOpacity style={wb.hearSlowlyBtn} onPress={speakWord}>
-              <Text style={wb.hearSlowlyText}>Hear it slowly</Text>
+            <TouchableOpacity 
+              style={[wb.hearSlowlyBtn, { paddingVertical: spacing.md }]} 
+              onPress={speakWord}
+            >
+              <Text style={[wb.hearSlowlyText, { fontSize: buttonTextSize }]}>
+                Hear it slowly
+              </Text>
             </TouchableOpacity>
           </TouchableOpacity>
         </Animated.View>
@@ -122,13 +173,20 @@ const Word = memo(function Word({
   fontFamily,
   onPress,
 }: WordProps) {
+  const { minTouchSize } = useResponsiveLayout();
+  
   return (
     <TouchableOpacity
       onPress={() => onPress(word)}
       activeOpacity={hasSyllable ? 0.6 : 1}
       accessibilityRole={hasSyllable ? 'button' : 'text'}
       accessibilityLabel={hasSyllable ? `${word} — tap for breakdown` : word}
-      hitSlop={{ top: 4, bottom: 4, left: 2, right: 2 }}
+      hitSlop={{ 
+        top: Math.max(4, minTouchSize * 0.1), 
+        bottom: Math.max(4, minTouchSize * 0.1), 
+        left: Math.max(2, minTouchSize * 0.05), 
+        right: Math.max(2, minTouchSize * 0.05) 
+      }}
     >
       <Text
         style={[
@@ -347,6 +405,9 @@ export function ReadingModeScreen({ route, navigation }: Props) {
     updateFontSize, updateLineHeight, updateBackgroundColor,
   } = useReadingComfort();
 
+  // Responsive layout - MUST be called before any early returns
+  const { spacing, mScale, screenPadding, readingMaxWidth, centeredContent, isTablet } = useResponsiveLayout();
+
   const [story, setStory] = useState<Story | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedEntry, setSelectedEntry] = useState<SyllableEntry | null>(null);
@@ -355,7 +416,7 @@ export function ReadingModeScreen({ route, navigation }: Props) {
   const [readWordIndices, setReadWordIndices] = useState<Set<number>>(new Set());
   const [helpCount, setHelpCount] = useState(0);
   const [sessionSaved, setSessionSaved] = useState(false);
-  const [startTime] = useState(Date.now());
+  const [startTime] = useState(() => Date.now());
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [readingProgress, setReadingProgress] = useState(0);
@@ -639,20 +700,36 @@ export function ReadingModeScreen({ route, navigation }: Props) {
   }
 
   const fontFamilyVal = fontFamily !== 'System' ? fontFamily : undefined;
+  
+  // Responsive font sizes
+  const headerLabelSize = mScale(14, 0.3);
+  const headerTitleSize = mScale(isTablet ? 26 : 22, 0.35);
+  const syllablesBtnTextSize = mScale(14, 0.3);
+  const instructionSize = mScale(14, 0.3);
 
   return (
     <View style={[styles.root, { backgroundColor }]}>
       {/* ── Header ── */}
-      <View style={[styles.header, { backgroundColor }]}>
-        <Text style={styles.headerLabel}>Reading Mode</Text>
+      <View style={[styles.header, { backgroundColor, paddingHorizontal: screenPadding }]}>
+        <Text style={[styles.headerLabel, { fontSize: headerLabelSize }]}>Reading Mode</Text>
 
         <View style={styles.headerTitleRow}>
-          <Text style={styles.headerTitle} numberOfLines={1}>{story.title}</Text>
+          <Text style={[styles.headerTitle, { fontSize: headerTitleSize, flex: 1 }]} numberOfLines={1}>
+            {story.title}
+          </Text>
           <TouchableOpacity
-            style={[styles.syllablesBtn, syllablesMode && styles.syllablesBtnActive]}
+            style={[
+              styles.syllablesBtn,
+              { paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+              syllablesMode && styles.syllablesBtnActive
+            ]}
             onPress={handleSyllablesToggle}
           >
-            <Text style={[styles.syllablesBtnText, syllablesMode && styles.syllablesBtnTextActive]}>
+            <Text style={[
+              styles.syllablesBtnText,
+              { fontSize: syllablesBtnTextSize },
+              syllablesMode && styles.syllablesBtnTextActive
+            ]}>
               {syllablesMode ? 'Syl·la·bles ✓' : 'Syl·la·bles'}
             </Text>
           </TouchableOpacity>
@@ -663,10 +740,17 @@ export function ReadingModeScreen({ route, navigation }: Props) {
       <DisplaySettingsPanel />
 
       {/* ── Divider ── */}
-      <View style={styles.divider} />
+      <View style={[styles.divider, { marginHorizontal: screenPadding }]} />
 
       {/* ── Instruction ── */}
-      <Text style={styles.instruction}>
+      <Text style={[
+        styles.instruction,
+        { 
+          fontSize: instructionSize,
+          paddingVertical: spacing.sm,
+          paddingHorizontal: screenPadding,
+        }
+      ]}>
         {syllablesMode 
           ? 'Tap any word to hear it. Underlined words have syllables - tap them to see breakdown!' 
           : 'Tap any word to hear it. Syllables mode is OFF - toggle it to see word breakdowns.'}
@@ -677,7 +761,12 @@ export function ReadingModeScreen({ route, navigation }: Props) {
         style={{ flex: 1 }}
         contentContainerStyle={[
           styles.readingArea,
-          isTablet && centeredContent,
+          { 
+            paddingHorizontal: screenPadding,
+            paddingTop: spacing.xl,
+            maxWidth: readingMaxWidth,
+          },
+          centeredContent,
         ]}
         showsVerticalScrollIndicator={false}
         scrollEventThrottle={16}
@@ -697,7 +786,7 @@ export function ReadingModeScreen({ route, navigation }: Props) {
           />
         ))}
 
-        <View style={{ height: 100 }} />
+        <View style={{ height: spacing.xxl * 2 }} />
       </ScrollView>
 
       {/* ── Bottom Player Bar ── */}
@@ -722,16 +811,16 @@ export function ReadingModeScreen({ route, navigation }: Props) {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   header: {
-    paddingHorizontal: SCREEN_PADDING,
-    paddingTop: 52, // safe area
+    paddingTop: 52, // safe area - will be combined with dynamic paddingHorizontal
     paddingBottom: Spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
+    // paddingHorizontal handled dynamically
   },
   headerLabel: {
-    fontSize: FontSize.sm,
     color: Colors.textMuted,
     marginBottom: Spacing.xs,
+    // fontSize handled dynamically
   },
   headerTitleRow: {
     flexDirection: 'row',
@@ -739,25 +828,23 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   headerTitle: {
-    fontSize: FontSize.xxl,
     fontWeight: '800',
     color: Colors.purple,
     letterSpacing: -0.3,
-    flex: 1,
+    // fontSize and flex handled dynamically
   },
   syllablesBtn: {
     backgroundColor: Colors.lavender,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
     borderRadius: BorderRadius.lg,
+    // padding handled dynamically
   },
   syllablesBtnActive: {
     backgroundColor: Colors.purple,
   },
   syllablesBtnText: {
-    fontSize: FontSize.sm,
     fontWeight: '600',
     color: Colors.purple,
+    // fontSize handled dynamically
   },
   syllablesBtnTextActive: {
     color: Colors.white,
@@ -765,18 +852,18 @@ const styles = StyleSheet.create({
   divider: {
     height: 1,
     backgroundColor: Colors.border,
-    marginHorizontal: SCREEN_PADDING,
+    // marginHorizontal handled dynamically
   },
   instruction: {
-    fontSize: FontSize.sm,
     color: Colors.textMuted,
     textAlign: 'center',
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: SCREEN_PADDING,
+    // fontSize, paddingVertical, paddingHorizontal handled dynamically
   },
   progressTrack: { height: 4, backgroundColor: Colors.border },
   progressFill: { height: 4, backgroundColor: Colors.purple, borderRadius: 2 },
-  readingArea: { paddingHorizontal: SCREEN_PADDING, paddingTop: Spacing.xl },
+  readingArea: { 
+    // paddingHorizontal, paddingTop, maxWidth handled dynamically
+  },
   paragraph: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: Spacing.xl },
   word: { color: Colors.textPrimary },
   wordHighlighted: {
@@ -804,7 +891,7 @@ const styles = StyleSheet.create({
 
 const ds = StyleSheet.create({
   container: {
-    paddingHorizontal: SCREEN_PADDING,
+    // paddingHorizontal handled dynamically via screenPadding prop
     paddingVertical: Spacing.md,
   },
   title: {
@@ -883,7 +970,7 @@ const bp = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.white,
-    paddingHorizontal: SCREEN_PADDING,
+    // paddingHorizontal handled dynamically
     paddingVertical: Spacing.md,
     borderTopWidth: 1,
     borderTopColor: Colors.border,
@@ -942,73 +1029,62 @@ const wb = StyleSheet.create({
     backgroundColor: Colors.white,
     borderTopLeftRadius: BorderRadius.xxl,
     borderTopRightRadius: BorderRadius.xxl,
-    padding: Spacing.xl,
-    paddingBottom: 44,
     ...Shadow.lg,
     position: 'relative',
+    // padding, paddingBottom handled dynamically in component
   },
   closeButton: {
     position: 'absolute',
-    top: Spacing.lg,
-    right: Spacing.lg,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
     backgroundColor: Colors.border,
     alignItems: 'center',
     justifyContent: 'center',
+    // top, right, width, height, borderRadius handled dynamically in component
   },
   closeIcon: {
-    fontSize: 16,
     color: Colors.textSecondary,
     fontWeight: '600',
+    // fontSize handled dynamically
   },
   title: {
-    fontSize: FontSize.lg,
     fontWeight: '700',
     color: Colors.purple,
-    marginBottom: Spacing.xl,
+    // fontSize, marginBottom handled dynamically
   },
   wordDisplay: {
-    fontSize: 42,
     fontWeight: '800',
     color: Colors.purple,
     textAlign: 'center',
-    marginBottom: Spacing.xl,
+    // fontSize, marginBottom handled dynamically
   },
   syllableRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: Spacing.md,
-    marginBottom: Spacing.xl,
+    // gap, marginBottom handled dynamically
   },
   syllableBox: {
     flex: 1,
-    maxWidth: 140,
-    paddingVertical: Spacing.lg,
-    paddingHorizontal: Spacing.xl,
-    borderRadius: BorderRadius.lg,
     alignItems: 'center',
+    // maxWidth, paddingVertical, paddingHorizontal, borderRadius handled dynamically
   },
   syllableTextPurple: {
-    fontSize: FontSize.xxl,
     fontWeight: '700',
     color: Colors.purple,
+    // fontSize handled dynamically
   },
   syllableTextGreen: {
-    fontSize: FontSize.xxl,
     fontWeight: '700',
     color: '#28A745',
+    // fontSize handled dynamically
   },
   hearSlowlyBtn: {
     backgroundColor: '#F0E6FF',
     borderRadius: BorderRadius.lg,
-    paddingVertical: Spacing.md,
     alignItems: 'center',
+    // paddingVertical handled dynamically
   },
   hearSlowlyText: {
-    fontSize: FontSize.md,
     fontWeight: '600',
     color: Colors.purple,
+    // fontSize handled dynamically
   },
 });

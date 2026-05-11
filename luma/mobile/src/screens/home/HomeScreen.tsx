@@ -9,12 +9,12 @@ import {
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { HomeStackParamList, StoryListItem, DayActivity, ContinueReadingStory } from '../../types';
-import { Colors, FontSize, Spacing, BorderRadius, Shadow } from '../../constants/theme';
+import { Colors, Spacing, BorderRadius, Shadow } from '../../constants/theme';
 import { SafeScreen } from '../../components/common/SafeScreen';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { progressApi, libraryApi, profileApi } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
-import { SCREEN_PADDING } from '../../utils/responsive';
+import { useResponsiveLayout } from '../../utils/responsiveHelpers';
 import { PhonicsLesson } from '../../types';
 import { phonicsApi } from '../../services/api';
 
@@ -23,18 +23,38 @@ type Props = NativeStackScreenProps<HomeStackParamList, 'HomeScreen'>;
 // ─── Weekly Day Circle Component ──────────────────────────────────────────────
 
 function DayCircle({ day, hasRead, isToday }: { day: string; hasRead: boolean; isToday: boolean }) {
+  const { spacing, mScale, minTouchSize } = useResponsiveLayout();
+  
+  // Responsive sizing
+  const circleSize = mScale(40, 0.2);
+  const dotSize = mScale(8, 0.2);
+  const labelSize = mScale(12, 0.3);
+  
   return (
-    <View style={styles.dayCircleContainer}>
+    <View style={[styles.dayCircleContainer, { gap: spacing.xs }]}>
       <View
         style={[
           styles.dayCircle,
           hasRead && styles.dayCircleActive,
           isToday && styles.dayCircleToday,
+          {
+            width: circleSize,
+            height: circleSize,
+            borderRadius: circleSize / 2,
+          },
         ]}
       >
-        {hasRead && <View style={styles.dayDot} />}
+        {hasRead && (
+          <View style={[styles.dayDot, { width: dotSize, height: dotSize, borderRadius: dotSize / 2 }]} />
+        )}
       </View>
-      <Text style={[styles.dayLabel, hasRead && styles.dayLabelActive]}>{day}</Text>
+      <Text style={[
+        styles.dayLabel,
+        hasRead && styles.dayLabelActive,
+        { fontSize: labelSize }
+      ]}>
+        {day}
+      </Text>
     </View>
   );
 }
@@ -48,35 +68,43 @@ function ContinueReadingCard({
   story: ContinueReadingStory | null;
   onPress: () => void;
 }) {
+  const { spacing, mScale, isTablet } = useResponsiveLayout();
+  
+  // Responsive sizing
+  const mascotSize = mScale(isTablet ? 70 : 60, 0.3);
+  const emojiSize = mScale(isTablet ? 36 : 32, 0.3);
+  const titleSize = mScale(isTablet ? 18 : 16, 0.3);
+  const subtextSize = mScale(14, 0.3);
+  
   if (!story) {
     return (
-      <View style={styles.continueCard}>
+      <View style={[styles.continueCard, { padding: spacing.lg, gap: spacing.md }]}>
         <View style={styles.continueCardLeft}>
-          <View style={styles.mascotCircle}>
-            <Text style={styles.mascotEmoji}>⭐</Text>
+          <View style={[styles.mascotCircle, { width: mascotSize, height: mascotSize, borderRadius: mascotSize / 2 }]}>
+            <Text style={[styles.mascotEmoji, { fontSize: emojiSize }]}>⭐</Text>
           </View>
         </View>
-        <View style={styles.continueCardRight}>
-          <Text style={styles.continueText}>Ready to start reading?</Text>
-          <Text style={styles.continueSubtext}>Pick a story from the library below!</Text>
+        <View style={[styles.continueCardRight, { gap: spacing.sm }]}>
+          <Text style={[styles.continueText, { fontSize: titleSize }]}>Ready to start reading?</Text>
+          <Text style={[styles.continueSubtext, { fontSize: subtextSize }]}>Pick a story from the library below!</Text>
         </View>
       </View>
     );
   }
 
   return (
-    <TouchableOpacity style={styles.continueCard} onPress={onPress} activeOpacity={0.9}>
+    <TouchableOpacity style={[styles.continueCard, { padding: spacing.lg, gap: spacing.md }]} onPress={onPress} activeOpacity={0.9}>
       <View style={styles.continueCardLeft}>
-        <View style={styles.mascotCircle}>
-          <Text style={styles.mascotEmoji}>📖</Text>
+        <View style={[styles.mascotCircle, { width: mascotSize, height: mascotSize, borderRadius: mascotSize / 2 }]}>
+          <Text style={[styles.mascotEmoji, { fontSize: emojiSize }]}>📖</Text>
         </View>
       </View>
-      <View style={styles.continueCardRight}>
-        <Text style={styles.continueText}>
+      <View style={[styles.continueCardRight, { gap: spacing.sm }]}>
+        <Text style={[styles.continueText, { fontSize: titleSize, lineHeight: titleSize * 1.4 }]}>
           Let&apos;s read <Text style={styles.continueStoryTitle}>&quot;{story.title}&quot;</Text> today!
         </Text>
-        <TouchableOpacity style={styles.startReadingBtn} onPress={onPress}>
-          <Text style={styles.startReadingText}>Start Reading →</Text>
+        <TouchableOpacity style={[styles.startReadingBtn, { paddingVertical: spacing.sm, paddingHorizontal: spacing.md }]} onPress={onPress}>
+          <Text style={[styles.startReadingText, { fontSize: subtextSize }]}>Start Reading →</Text>
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
@@ -92,6 +120,8 @@ function LibraryStoryItem({
   story: StoryListItem & { completionPct: number };
   onPress: () => void;
 }) {
+  const { spacing, mScale, isTablet } = useResponsiveLayout();
+  
   // Get illustration emoji based on story title keywords
   const getIllustration = (title: string): string => {
     const lower = title.toLowerCase();
@@ -122,19 +152,37 @@ function LibraryStoryItem({
     story.readingLevel === 'ELEMENTARY' ? 'Level 2' :
       story.readingLevel === 'INTERMEDIATE' ? 'Level 3' : 'Level 4';
 
+  // Responsive sizing
+  const thumbSize = mScale(isTablet ? 64 : 56, 0.3);
+  const emojiSize = mScale(isTablet ? 32 : 28, 0.3);
+  const titleSize = mScale(isTablet ? 18 : 16, 0.3);
+  const levelSize = mScale(14, 0.3);
+  const percentSize = mScale(14, 0.3);
+
   return (
-    <TouchableOpacity style={styles.libraryItem} onPress={onPress} activeOpacity={0.85}>
-      <View style={[styles.storyThumb, { backgroundColor: getBgColor(story.title) }]}>
-        <Text style={styles.thumbEmoji}>{getIllustration(story.title)}</Text>
+    <TouchableOpacity 
+      style={[styles.libraryItem, { padding: spacing.md, gap: spacing.md }]} 
+      onPress={onPress} 
+      activeOpacity={0.85}
+    >
+      <View style={[styles.storyThumb, { 
+        backgroundColor: getBgColor(story.title),
+        width: thumbSize,
+        height: thumbSize,
+        borderRadius: 12,
+      }]}>
+        <Text style={[styles.thumbEmoji, { fontSize: emojiSize }]}>{getIllustration(story.title)}</Text>
       </View>
-      <View style={styles.storyInfo}>
-        <Text style={styles.storyTitle} numberOfLines={1}>{story.title}</Text>
-        <Text style={styles.storyLevel}>{levelLabel}</Text>
+      <View style={[styles.storyInfo, { gap: spacing.xs }]}>
+        <Text style={[styles.storyTitle, { fontSize: titleSize }]} numberOfLines={1}>{story.title}</Text>
+        <Text style={[styles.storyLevel, { fontSize: levelSize }]}>{levelLabel}</Text>
         <View style={styles.progressBarContainer}>
           <View style={[styles.progressBar, { width: `${story.completionPct}%` }]} />
         </View>
       </View>
-      <Text style={styles.progressPercent}>{story.completionPct}%</Text>
+      <Text style={[styles.progressPercent, { fontSize: percentSize, minWidth: mScale(35, 0.2) }]}>
+        {story.completionPct}%
+      </Text>
     </TouchableOpacity>
   );
 }
@@ -148,15 +196,34 @@ function PhonicsPreviewCard({
   lessons: PhonicsLesson[];
   onPress: () => void;
 }) {
+  const { spacing, mScale, wp } = useResponsiveLayout();
   const previewLessons = lessons.slice(0, 4);
 
+  // Responsive font sizes
+  const letterSize = mScale(40, 0.3);
+  const smallSize = mScale(24, 0.3);
+
   return (
-    <TouchableOpacity style={styles.phonicsPreviewCard} onPress={onPress} activeOpacity={0.9}>
-      <View style={styles.phonicsGrid}>
+    <TouchableOpacity 
+      style={[styles.phonicsPreviewCard, { padding: spacing.xs }]} 
+      onPress={onPress} 
+      activeOpacity={0.9}
+    >
+      <View style={[styles.phonicsGrid, { gap: spacing.xs }]}>
         {previewLessons.map((lesson) => (
-          <View key={lesson.id} style={[styles.phonicsPreviewItem, { backgroundColor: lesson.colorTheme }]}>
-            <Text style={styles.phonicsPreviewLetter}>{lesson.letter}</Text>
-            <Text style={styles.phonicsPreviewSmall}>{lesson.letter.toLowerCase()}</Text>
+          <View 
+            key={lesson.id} 
+            style={[styles.phonicsPreviewItem, { 
+              backgroundColor: lesson.colorTheme,
+              width: wp(48), // ~48% width for 2 columns with gap
+              aspectRatio: 1.5,
+              borderRadius: 12,
+              padding: spacing.xs,
+              gap: spacing.xs,
+            }]}
+          >
+            <Text style={[styles.phonicsPreviewLetter, { fontSize: letterSize }]}>{lesson.letter}</Text>
+            <Text style={[styles.phonicsPreviewSmall, { fontSize: smallSize }]}>{lesson.letter.toLowerCase()}</Text>
           </View>
         ))}
       </View>
@@ -170,6 +237,9 @@ export function HomeScreen({ navigation }: Props) {
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // Responsive layout
+  const { spacing, mScale, screenPadding, centeredContent, isTablet } = useResponsiveLayout();
 
   // Data states
   const [weeklyActivity, setWeeklyActivity] = useState<DayActivity[]>([]);
@@ -178,6 +248,12 @@ export function HomeScreen({ navigation }: Props) {
   const [phonicsLessons, setPhonicsLessons] = useState<PhonicsLesson[]>([]);
   const [streak, setStreak] = useState(0);
   const [displayName, setDisplayName] = useState(user?.displayName ?? 'Reader');
+  
+  // Responsive font sizes for main content
+  const greetingSize = mScale(16, 0.3);
+  const titleSize = mScale(isTablet ? 28 : 24, 0.35);
+  const sectionTitleSize = mScale(isTablet ? 22 : 20, 0.3);
+  const streakNumberSize = mScale(16, 0.3);
 
   const fetchAllData = useCallback(async () => {
     if (!user?.id) return;
@@ -267,26 +343,11 @@ export function HomeScreen({ navigation }: Props) {
     const isEducator = user?.role === 'EDUCATOR';
     return (
       <SafeScreen withPadding backgroundColor={Colors.cream}>
-        <View style={parentStyles.container}>
-          <Text style={parentStyles.emoji}>{isEducator ? '🎓' : '👨‍👩‍👧‍👦'}</Text>
-          <Text style={parentStyles.title}>
-            Welcome, {displayName ?? (isEducator ? 'Teacher' : 'Parent')}!
-          </Text>
-          <Text style={parentStyles.subtitle}>
-            {isEducator
-              ? "Track your students' reading progress and help them grow."
-              : "Track your child's reading progress and help them grow."}
-          </Text>
-          <TouchableOpacity
-            style={parentStyles.dashboardBtn}
-            onPress={() => navigation.navigate('ParentDashboard')}
-            accessibilityRole="button"
-          >
-            <Text style={parentStyles.dashboardBtnText}>
-              {isEducator ? '📊 Go to Student Dashboard' : '📊 Go to Parent Dashboard'}
-            </Text>
-          </TouchableOpacity>
-        </View>
+        <ParentView
+          displayName={displayName}
+          isEducator={isEducator}
+          onNavigate={() => navigation.navigate('ParentDashboard')}
+        />
       </SafeScreen>
     );
   }
@@ -303,25 +364,49 @@ export function HomeScreen({ navigation }: Props) {
     <SafeScreen withPadding={false} scrollable={false}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { 
+            paddingHorizontal: screenPadding,
+            paddingTop: spacing.xl,
+          },
+          centeredContent,
+        ]}
         refreshControl={
           <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={Colors.purple} />
         }
       >
         {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.greetingSmall}>{timeOfDayGreeting()}!</Text>
+        <View style={[styles.header, { marginBottom: spacing.lg }]}>
+          <Text style={[styles.greetingSmall, { fontSize: greetingSize, marginBottom: spacing.xs }]}>
+            {timeOfDayGreeting()}!
+          </Text>
           <View style={styles.titleRow}>
-            <Text style={styles.title}>{displayName}&apos;s Reading Day</Text>
-            <View style={styles.streakBadge}>
+            <Text style={[styles.title, { fontSize: titleSize, flex: 1 }]}>
+              {displayName}&apos;s Reading Day
+            </Text>
+            <View style={[
+              styles.streakBadge,
+              { 
+                paddingHorizontal: spacing.md,
+                paddingVertical: spacing.xs,
+                gap: spacing.xs,
+              }
+            ]}>
               <Text style={styles.streakIcon}>⚡</Text>
-              <Text style={styles.streakNumber}>{streak}</Text>
+              <Text style={[styles.streakNumber, { fontSize: streakNumberSize }]}>{streak}</Text>
             </View>
           </View>
         </View>
 
         {/* Weekly Day Circles */}
-        <View style={styles.weeklyContainer}>
+        <View style={[
+          styles.weeklyContainer,
+          { 
+            marginBottom: spacing.lg,
+            paddingHorizontal: spacing.xs,
+          }
+        ]}>
           {weeklyActivity.map((day, index) => (
             <DayCircle
               key={index}
@@ -336,9 +421,11 @@ export function HomeScreen({ navigation }: Props) {
         <ContinueReadingCard story={continueReading} onPress={handleContinueReading} />
 
         {/* Story Library Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Story Library</Text>
-          <View style={styles.libraryContainer}>
+        <View style={[styles.section, { marginBottom: spacing.xl }]}>
+          <Text style={[styles.sectionTitle, { fontSize: sectionTitleSize, marginBottom: spacing.md }]}>
+            Story Library
+          </Text>
+          <View style={[styles.libraryContainer, { gap: spacing.md }]}>
             {stories.length > 0 ? (
               stories.map((story) => (
                 <LibraryStoryItem
@@ -349,11 +436,13 @@ export function HomeScreen({ navigation }: Props) {
               ))
             ) : (
               <TouchableOpacity
-                style={styles.emptyLibraryCard}
+                style={[styles.emptyLibraryCard, { padding: spacing.xl, gap: spacing.sm }]}
                 onPress={() => navigation.navigate('GenerateStory')}
               >
-                <Text style={styles.emptyLibraryEmoji}>✨</Text>
-                <Text style={styles.emptyLibraryText}>Generate your first story!</Text>
+                <Text style={[styles.emptyLibraryEmoji, { fontSize: mScale(40, 0.3) }]}>✨</Text>
+                <Text style={[styles.emptyLibraryText, { fontSize: mScale(16, 0.3) }]}>
+                  Generate your first story!
+                </Text>
               </TouchableOpacity>
             )}
           </View>
@@ -361,8 +450,10 @@ export function HomeScreen({ navigation }: Props) {
 
         {/* Phonics Practice Preview */}
         {phonicsLessons.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Phonics Practice</Text>
+          <View style={[styles.section, { marginBottom: spacing.xl }]}>
+            <Text style={[styles.sectionTitle, { fontSize: sectionTitleSize, marginBottom: spacing.md }]}>
+              Phonics Practice
+            </Text>
             <PhonicsPreviewCard
               lessons={phonicsLessons}
               onPress={() => navigation.navigate('Phonics')}
@@ -371,7 +462,7 @@ export function HomeScreen({ navigation }: Props) {
         )}
 
         {/* Bottom padding for scroll */}
-        <View style={styles.bottomPadding} />
+        <View style={[styles.bottomPadding, { height: mScale(100, 0.2) }]} />
       </ScrollView>
     </SafeScreen>
   );
@@ -381,16 +472,15 @@ export function HomeScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingHorizontal: SCREEN_PADDING,
-    paddingTop: Spacing.xl,
+    // Padding handled dynamically via screenPadding
+    // Top padding handled dynamically
   },
   header: {
-    marginBottom: Spacing.lg,
+    // Margin handled dynamically
   },
   greetingSmall: {
-    fontSize: FontSize.md,
     color: Colors.textSecondary,
-    marginBottom: Spacing.xs,
+    // Font size and margin handled dynamically
   },
   titleRow: {
     flexDirection: 'row',
@@ -398,46 +488,40 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   title: {
-    fontSize: FontSize.xxl,
     fontWeight: '800',
     color: Colors.purple,
     letterSpacing: -0.5,
-    flex: 1,
+    // Font size and flex handled dynamically
   },
   streakBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFF8E1',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
     borderRadius: BorderRadius.full,
-    gap: Spacing.xs,
+    // Padding and gap handled dynamically
   },
   streakIcon: {
     fontSize: 16,
   },
   streakNumber: {
-    fontSize: FontSize.md,
     fontWeight: '700',
     color: Colors.textPrimary,
+    // Font size handled dynamically
   },
   weeklyContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: Spacing.lg,
-    paddingHorizontal: Spacing.xs,
+    // Margin and padding handled dynamically
   },
   dayCircleContainer: {
     alignItems: 'center',
-    gap: Spacing.xs,
+    // Gap handled dynamically
   },
   dayCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
     backgroundColor: '#F0F0F0',
     alignItems: 'center',
     justifyContent: 'center',
+    // Size handled dynamically in component
   },
   dayCircleActive: {
     backgroundColor: Colors.purple,
@@ -447,15 +531,13 @@ const styles = StyleSheet.create({
     borderColor: Colors.purpleLight,
   },
   dayDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
     backgroundColor: Colors.white,
+    // Size handled dynamically in component
   },
   dayLabel: {
-    fontSize: FontSize.xs,
     color: Colors.textMuted,
     fontWeight: '500',
+    // Font size handled dynamically
   },
   dayLabelActive: {
     color: Colors.purple,
@@ -465,99 +547,89 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: Colors.lavender,
     borderRadius: BorderRadius.xl,
-    padding: Spacing.lg,
-    marginBottom: Spacing.xl,
-    gap: Spacing.md,
     ...Shadow.sm,
+    // Padding, gap, margin handled dynamically
   },
   continueCardLeft: {
     justifyContent: 'center',
   },
   mascotCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
     backgroundColor: Colors.purple,
     alignItems: 'center',
     justifyContent: 'center',
+    // Size handled dynamically in component
   },
   mascotEmoji: {
-    fontSize: 32,
+    // Font size handled dynamically
   },
   continueCardRight: {
     flex: 1,
     justifyContent: 'center',
-    gap: Spacing.sm,
+    // Gap handled dynamically
   },
   continueText: {
-    fontSize: FontSize.md,
     color: Colors.textPrimary,
     fontWeight: '600',
-    lineHeight: 22,
+    // Font size and lineHeight handled dynamically
   },
   continueStoryTitle: {
     color: Colors.purple,
     fontWeight: '700',
   },
   continueSubtext: {
-    fontSize: FontSize.sm,
     color: Colors.textSecondary,
+    // Font size handled dynamically
   },
   startReadingBtn: {
     backgroundColor: Colors.purple,
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.md,
     borderRadius: BorderRadius.lg,
     alignSelf: 'flex-start',
+    // Padding handled dynamically
   },
   startReadingText: {
     color: Colors.white,
-    fontSize: FontSize.sm,
     fontWeight: '700',
+    // Font size handled dynamically
   },
   section: {
-    marginBottom: Spacing.xl,
+    // Margin handled dynamically
   },
   sectionTitle: {
-    fontSize: FontSize.xl,
     fontWeight: '800',
     color: Colors.textPrimary,
-    marginBottom: Spacing.md,
+    // Font size and margin handled dynamically
   },
   libraryContainer: {
-    gap: Spacing.md,
+    // Gap handled dynamically
   },
   libraryItem: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.white,
     borderRadius: BorderRadius.lg,
-    padding: Spacing.md,
-    gap: Spacing.md,
     ...Shadow.sm,
+    // Padding and gap handled dynamically
   },
   storyThumb: {
-    width: 56,
-    height: 56,
-    borderRadius: BorderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
+    // Size and borderRadius handled dynamically in component
   },
   thumbEmoji: {
-    fontSize: 28,
+    // Font size handled dynamically
   },
   storyInfo: {
     flex: 1,
-    gap: Spacing.xs,
+    // Gap handled dynamically
   },
   storyTitle: {
-    fontSize: FontSize.md,
     fontWeight: '700',
     color: Colors.textPrimary,
+    // Font size handled dynamically
   },
   storyLevel: {
-    fontSize: FontSize.sm,
     color: Colors.textSecondary,
+    // Font size handled dynamically
   },
   progressBarContainer: {
     height: 4,
@@ -570,99 +642,151 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.purple,
   },
   progressPercent: {
-    fontSize: FontSize.sm,
     color: Colors.textMuted,
     fontWeight: '600',
-    minWidth: 35,
     textAlign: 'right',
+    // Font size and minWidth handled dynamically
   },
   emptyLibraryCard: {
     backgroundColor: Colors.lavender,
     borderRadius: BorderRadius.xl,
-    padding: Spacing.xl,
     alignItems: 'center',
-    gap: Spacing.sm,
+    // Padding and gap handled dynamically
   },
   emptyLibraryEmoji: {
-    fontSize: 40,
+    // Font size handled dynamically
   },
   emptyLibraryText: {
-    fontSize: FontSize.md,
     color: Colors.purple,
     fontWeight: '700',
+    // Font size handled dynamically
   },
   phonicsPreviewCard: {
     backgroundColor: Colors.white,
     borderRadius: BorderRadius.xl,
-    padding: 4,
     ...Shadow.sm,
+    // Padding handled dynamically
   },
   phonicsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 1,
+    // Gap handled dynamically
   },
   phonicsPreviewItem: {
-    width: '49.8%',
-    aspectRatio: 1.5,
-    borderRadius: BorderRadius.lg,
-    padding: 2,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 1,
+    // Width, aspectRatio, borderRadius, padding, gap handled dynamically
   },
   phonicsPreviewLetter: {
-    fontSize: 40,
     fontWeight: '800',
     color: Colors.purple,
+    // Font size handled dynamically
   },
   phonicsPreviewSmall: {
-    fontSize: 24,
     fontWeight: '600',
     color: Colors.purple,
     opacity: 0.7,
+    // Font size handled dynamically
   },
   bottomPadding: {
-    height: 100,
+    // Height handled dynamically
   },
 });
 
 // ─── Parent View Styles ────────────────────────────────────────────────────────
+
+function ParentView({ 
+  displayName, 
+  isEducator, 
+  onNavigate 
+}: { 
+  displayName: string | null; 
+  isEducator: boolean; 
+  onNavigate: () => void;
+}) {
+  const { spacing, mScale, centeredContent } = useResponsiveLayout();
+  
+  // Responsive font sizes
+  const emojiSize = mScale(64, 0.4);
+  const titleSize = mScale(24, 0.35);
+  const subtitleSize = mScale(16, 0.3);
+  const buttonTextSize = mScale(16, 0.3);
+  
+  return (
+    <View style={[
+      parentStyles.container,
+      { padding: spacing.xxl },
+      centeredContent,
+    ]}>
+      <Text style={[parentStyles.emoji, { fontSize: emojiSize, marginBottom: spacing.lg }]}>
+        {isEducator ? '🎓' : '👨‍👩‍👧‍👦'}
+      </Text>
+      <Text style={[
+        parentStyles.title,
+        { fontSize: titleSize, marginBottom: spacing.md }
+      ]}>
+        Welcome, {displayName ?? (isEducator ? 'Teacher' : 'Parent')}!
+      </Text>
+      <Text style={[
+        parentStyles.subtitle,
+        { 
+          fontSize: subtitleSize, 
+          marginBottom: spacing.xl,
+          lineHeight: subtitleSize * 1.5,
+        }
+      ]}>
+        {isEducator
+          ? "Track your students' reading progress and help them grow."
+          : "Track your child's reading progress and help them grow."}
+      </Text>
+      <TouchableOpacity
+        style={[
+          parentStyles.dashboardBtn,
+          { 
+            paddingVertical: spacing.md,
+            paddingHorizontal: spacing.xl,
+          }
+        ]}
+        onPress={onNavigate}
+        accessibilityRole="button"
+      >
+        <Text style={[parentStyles.dashboardBtnText, { fontSize: buttonTextSize }]}>
+          {isEducator ? '📊 Go to Student Dashboard' : '📊 Go to Parent Dashboard'}
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
 
 const parentStyles = StyleSheet.create({
   container: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: Spacing.xxl,
+    // Padding handled dynamically
   },
   emoji: {
-    fontSize: 64,
-    marginBottom: Spacing.lg,
+    // Font size and margin handled dynamically
   },
   title: {
-    fontSize: FontSize.xxl,
     fontWeight: '800',
     color: Colors.textPrimary,
     textAlign: 'center',
-    marginBottom: Spacing.md,
+    // Font size and margin handled dynamically
   },
   subtitle: {
-    fontSize: FontSize.md,
     color: Colors.textSecondary,
     textAlign: 'center',
-    marginBottom: Spacing.xl,
-    lineHeight: 24,
+    // Font size, margin, lineHeight handled dynamically
   },
   dashboardBtn: {
     backgroundColor: Colors.purple,
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.xl,
     borderRadius: BorderRadius.lg,
+    // Padding handled dynamically
   },
   dashboardBtnText: {
-    fontSize: FontSize.md,
     color: Colors.white,
     fontWeight: '700',
+    // Font size handled dynamically
   },
 });

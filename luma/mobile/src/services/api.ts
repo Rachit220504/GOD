@@ -17,8 +17,8 @@ import {
   ContinueReadingStory,
   PhonicsLesson,
   PhonicsProgress,
+  StoryListItem,
 } from '../types';
-import { PHONICS_PRONUNCIATIONS } from '../constants/phonics';
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -53,14 +53,19 @@ api.interceptors.request.use(
 // ─── Response Interceptor — auto-refresh on 401 ───────────────────────────────
 
 let isRefreshing = false;
-let refreshSubscribers: ((token: string) => void)[] = [];
+let refreshSubscribers: { resolve: (token: string) => void; reject: (error: any) => void }[] = [];
 
-function subscribeTokenRefresh(cb: (token: string) => void) {
-  refreshSubscribers.push(cb);
+function subscribeTokenRefresh(resolve: (token: string) => void, reject: (error: any) => void) {
+  refreshSubscribers.push({ resolve, reject });
 }
 
 function onRefreshed(token: string) {
-  refreshSubscribers.forEach((cb) => cb(token));
+  refreshSubscribers.forEach(({ resolve }) => resolve(token));
+  refreshSubscribers = [];
+}
+
+function onRefreshFailed(error: any) {
+  refreshSubscribers.forEach(({ reject }) => reject(error));
   refreshSubscribers = [];
 }
 
@@ -71,12 +76,14 @@ api.interceptors.response.use(
 
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
           subscribeTokenRefresh((token: string) => {
             if (originalRequest.headers) {
               originalRequest.headers.Authorization = `Bearer ${token}`;
             }
             resolve(api(originalRequest));
+          }, (err) => {
+            reject(err);
           });
         });
       }
@@ -104,8 +111,9 @@ api.interceptors.response.use(
           originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
         }
         return api(originalRequest);
-      } catch {
+      } catch (err) {
         isRefreshing = false;
+        onRefreshFailed(err);
         await TokenStorage.clear();
         return Promise.reject(error);
       }
@@ -167,7 +175,8 @@ export const authApi = {
 
   async logout(): Promise<void> {
     try {
-      await api.post('/auth/logout');
+      // Use _retry to avoid getting stuck in refresh loops if offline
+      await api.post('/auth/logout', undefined, { _retry: true } as any);
     } catch (error) {
       // Ignore server errors during logout (like the 401 you are seeing)
       console.log('Server logout rejected, clearing local tokens anyway');
@@ -231,7 +240,7 @@ export const contentApi = {
     ageGroup?: string;
     maxWords?: number;
   }): Promise<Story> {
-    const { data } = await api.post<ApiResponse<Story>>('/content/generate-story', payload);
+    const { data } = await api.post<ApiResponse<Story>>('/content/generate-story', payload, { timeout: 60000 });
     return data.data;
   },
 
@@ -297,89 +306,20 @@ export const libraryApi = {
 
 // ─── Phonics API ──────────────────────────────────────────────────────────────
 
-// Generate phonics lessons from local pronunciation data
-const generatePhonicsLessons = (): PhonicsLesson[] => {
-  const colors = [
-    '#FFE5E5', '#E5F5FF', '#E5FFE5', '#FFF5E5', '#F5E5FF',
-    '#FFE5F5', '#E5FFF5', '#F5FFE5', '#FFE5CC', '#CCE5FF'
-  ];
-
-  return PHONICS_PRONUNCIATIONS.map((pronunciation, index) => ({
-    id: `phonics-${pronunciation.letter}`,
-    letter: pronunciation.letter,
-    sound: pronunciation.sound,
-    examples: generateExampleWords(pronunciation.letter),
-    wrongExamples: generateWrongExamples(pronunciation.letter),
-    colorTheme: colors[index % colors.length],
-    difficulty: 1,
-    order: index + 1,
-  }));
-};
-
-// Helper function to generate example words for each letter
-const generateExampleWords = (letter: string): string[] => {
-  const wordMap: Record<string, string[]> = {
-    'A': ['apple', 'ant', 'alligator'],
-    'B': ['ball', 'bear', 'banana'],
-    'C': ['cat', 'car', 'cake'],
-    'D': ['dog', 'duck', 'door'],
-    'E': ['elephant', 'egg', 'engine'],
-    'F': ['fish', 'frog', 'flower'],
-    'G': ['goat', 'girl', 'green'],
-    'H': ['hat', 'house', 'horse'],
-    'I': ['ice cream', 'igloo', 'insect'],
-    'J': ['juice', 'jump', 'jelly'],
-    'K': ['kite', 'king', 'kitten'],
-    'L': ['lion', 'lamp', 'leaf'],
-    'M': ['moon', 'mouse', 'milk'],
-    'N': ['nest', 'nose', 'net'],
-    'O': ['orange', 'octopus', 'ocean'],
-    'P': ['pencil', 'penguin', 'pizza'],
-    'Q': ['queen', 'quiet', 'question'],
-    'R': ['rabbit', 'rain', 'robot'],
-    'S': ['sun', 'snake', 'star'],
-    'T': ['tree', 'tiger', 'train'],
-    'U': ['umbrella', 'unicorn', 'up'],
-    'V': ['violin', 'vegetable', 'van'],
-    'W': ['water', 'window', 'whale'],
-    'X': ['x-ray', 'xylophone', 'box'],
-    'Y': ['yacht', 'yarn', 'yellow'],
-    'Z': ['zebra', 'zero', 'zoo'],
-  };
-  return wordMap[letter] || ['word1', 'word2', 'word3'];
-};
-
-// Helper function to generate wrong examples (distractors)
-const generateWrongExamples = (letter: string): string[] => {
-  const allDistractors = ['sun', 'moon', 'tree', 'car', 'house', 'book', 'ball', 'hat', 'shoe', 'cup'];
-  // Filter out words that might be examples for this letter
-  const examples = generateExampleWords(letter);
-  const filteredDistractors = allDistractors.filter(d => !examples.includes(d));
-  return filteredDistractors.slice(0, 3);
-};
-
 export const phonicsApi = {
   async getLessons(): Promise<PhonicsLesson[]> {
-    // Return locally generated lessons instead of fetching from API
-    return generatePhonicsLessons();
+    const { data } = await api.get<ApiResponse<PhonicsLesson[]>>('/phonics/lessons');
+    return data.data;
   },
 
   async getMyProgress(): Promise<PhonicsProgress[]> {
-    // For now, return empty progress - in a real app this would come from storage/backend
-    return [];
+    const { data } = await api.get<ApiResponse<PhonicsProgress[]>>('/phonics/my-progress');
+    return data.data;
   },
 
   async recordPractice(lessonId: string, correct: boolean): Promise<PhonicsProgress> {
-    // For now, return a mock progress object - in a real app this would save to backend
-    return {
-      id: `progress-${lessonId}`,
-      userId: 'current-user',
-      lessonId,
-      attempts: 1,
-      correctCount: correct ? 1 : 0,
-      masteryLevel: correct ? 10 : 0,
-      lastPracticedAt: new Date().toISOString(),
-    };
+    const { data } = await api.post<ApiResponse<PhonicsProgress>>('/phonics/practice', { lessonId, correct });
+    return data.data;
   },
 };
 

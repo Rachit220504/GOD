@@ -2,12 +2,13 @@ import React, { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert,
 } from 'react-native';
-import { Colors, FontSize, Spacing, BorderRadius } from '../../constants/theme';
+import { Colors, Spacing, BorderRadius } from '../../constants/theme';
 import { SafeScreen } from '../../components/common/SafeScreen';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { useAuth } from '../../contexts/AuthContext';
 import { useReadingComfort } from '../../contexts/ReadingComfortContext';
+import { useResponsiveLayout } from '../../utils/responsiveHelpers';
 
 const BG_PRESETS = [
   { color: '#FDFBF7', label: 'Cream' },
@@ -61,6 +62,29 @@ export function SettingsScreen() {
   const { user, logout } = useAuth();
   const comfort = useReadingComfort();
   const [isSyncing, setIsSyncing] = useState(false);
+  
+  // Responsive layout
+  const { spacing, mScale, screenPadding, formMaxWidth, centeredContent, isTablet } = useResponsiveLayout();
+  
+  // Responsive font sizes
+  const titleSize = mScale(isTablet ? 32 : 28, 0.35);
+  const subtitleSize = mScale(16, 0.3);
+  const sectionTitleSize = mScale(20, 0.3);
+  const userNameSize = mScale(18, 0.3);
+  const userEmailSize = mScale(14, 0.3);
+  const roleTextSize = mScale(12, 0.3);
+  const settingLabelSize = mScale(16, 0.3);
+  const sliderBtnTextSize = mScale(20, 0.3);
+  const sliderValueSize = mScale(16, 0.3);
+  const bgLabelSize = mScale(10, 0.3);
+  const checkMarkSize = mScale(18, 0.3);
+  const fontChipTextSize = mScale(14, 0.3);
+  const currentFontLabelSize = mScale(16, 0.3);
+  const currentFontValueSize = mScale(18, 0.3);
+  const avatarSize = mScale(56, 0.3);
+  const avatarTextSize = mScale(28, 0.3);
+  const sliderBtnSize = mScale(36, 0.2);
+  const bgSwatchSize = mScale(44, 0.2);
 
   const handleSync = useCallback(async () => {
     setIsSyncing(true);
@@ -83,65 +107,167 @@ export function SettingsScreen() {
 
   return (
     <SafeScreen scrollable withPadding={false} backgroundColor={comfort.backgroundColor}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.content}>
+      <ScrollView 
+        showsVerticalScrollIndicator={false} 
+        contentContainerStyle={[
+          s.content,
+          { paddingHorizontal: screenPadding, paddingBottom: spacing.xxl * 2 },
+          centeredContent,
+          { maxWidth: formMaxWidth, width: '100%' }
+        ]}
+      >
         {/* Header */}
-        <View style={s.header}>
-          <Text style={s.title}>Settings ⚙️</Text>
-          <Text style={s.subtitle}>Make reading comfortable for you</Text>
+        <View style={[s.header, { paddingTop: spacing.xl, paddingBottom: spacing.xl, gap: spacing.xs }]}>
+          <Text style={[s.title, { fontSize: titleSize }]}>Settings ⚙️</Text>
+          <Text style={[s.subtitle, { fontSize: subtitleSize }]}>Make reading comfortable for you</Text>
         </View>
 
         {/* User info */}
-        <Card variant="elevated" style={s.section}>
-          <View style={s.userRow}>
-            <View style={s.avatar}><Text style={s.avatarText}>👤</Text></View>
+        <Card variant="elevated" style={{ marginBottom: spacing.md, gap: spacing.md }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+            <View style={[s.avatar, { 
+              width: avatarSize, 
+              height: avatarSize, 
+              borderRadius: avatarSize / 2,
+              backgroundColor: Colors.lavender, 
+              alignItems: 'center', 
+              justifyContent: 'center' 
+            }]}>
+              <Text style={{ fontSize: avatarTextSize }}>👤</Text>
+            </View>
             <View style={{ flex: 1 }}>
-              <Text style={s.userName}>{user?.displayName ?? 'Reader'}</Text>
-              <Text style={s.userEmail}>{user?.email}</Text>
-              <View style={s.roleBadge}>
-                <Text style={s.roleText}>{user?.role ?? 'CHILD'}</Text>
+              <Text style={[s.userName, { fontSize: userNameSize }]}>{user?.displayName ?? 'Reader'}</Text>
+              <Text style={[s.userEmail, { fontSize: userEmailSize }]}>{user?.email}</Text>
+              <View style={[s.roleBadge, { 
+                marginTop: 4, 
+                alignSelf: 'flex-start', 
+                backgroundColor: Colors.lavender, 
+                paddingHorizontal: spacing.sm, 
+                paddingVertical: 2, 
+                borderRadius: BorderRadius.full 
+              }]}>
+                <Text style={[s.roleText, { fontSize: roleTextSize }]}>{user?.role ?? 'CHILD'}</Text>
               </View>
             </View>
           </View>
         </Card>
 
         {/* Reading Comfort */}
-        <Text style={s.sectionTitle}>📖 Reading Comfort</Text>
-        <Card variant="elevated" style={s.section}>
+        <Text style={[s.sectionTitle, { fontSize: sectionTitleSize, marginBottom: spacing.sm, marginTop: spacing.sm }]}>
+          📖 Reading Comfort
+        </Text>
+        <Card variant="elevated" style={{ marginBottom: spacing.md, gap: spacing.md }}>
 
           <Row label="Font Size">
-            <Slider
-              value={comfort.fontSize}
-              min={14} max={32} step={1}
-              onChange={comfort.updateFontSize}
-              format={(v) => `${v}px`}
-            />
+            <View style={[s.sliderRow, { flexDirection: 'row', alignItems: 'center', gap: spacing.md }]}>
+              <TouchableOpacity
+                style={[s.sliderBtn, { 
+                  width: sliderBtnSize, 
+                  height: sliderBtnSize, 
+                  borderRadius: sliderBtnSize / 2,
+                  backgroundColor: Colors.lavender, 
+                  alignItems: 'center', 
+                  justifyContent: 'center' 
+                }]}
+                onPress={() => comfort.updateFontSize(Math.max(14, Math.round((comfort.fontSize - 1) * 100) / 100))}
+              >
+                <Text style={[s.sliderBtnText, { fontSize: sliderBtnTextSize, fontWeight: '700', color: Colors.purple }]}>−</Text>
+              </TouchableOpacity>
+              <Text style={[s.sliderValue, { fontSize: sliderValueSize, fontWeight: '700', color: Colors.textPrimary, minWidth: 48, textAlign: 'center' }]}>
+                {comfort.fontSize}px
+              </Text>
+              <TouchableOpacity
+                style={[s.sliderBtn, { 
+                  width: sliderBtnSize, 
+                  height: sliderBtnSize, 
+                  borderRadius: sliderBtnSize / 2,
+                  backgroundColor: Colors.lavender, 
+                  alignItems: 'center', 
+                  justifyContent: 'center' 
+                }]}
+                onPress={() => comfort.updateFontSize(Math.min(32, Math.round((comfort.fontSize + 1) * 100) / 100))}
+              >
+                <Text style={[s.sliderBtnText, { fontSize: sliderBtnTextSize, fontWeight: '700', color: Colors.purple }]}>+</Text>
+              </TouchableOpacity>
+            </View>
           </Row>
 
           <Row label="Letter Spacing">
-            <Slider
-              value={comfort.letterSpacing}
-              min={0} max={0.2} step={0.02}
-              onChange={comfort.updateLetterSpacing}
-              format={(v) => `${Math.round(v * 100)}%`}
-            />
+            <View style={[s.sliderRow, { flexDirection: 'row', alignItems: 'center', gap: spacing.md }]}>
+              <TouchableOpacity
+                style={[s.sliderBtn, { 
+                  width: sliderBtnSize, 
+                  height: sliderBtnSize, 
+                  borderRadius: sliderBtnSize / 2,
+                  backgroundColor: Colors.lavender, 
+                  alignItems: 'center', 
+                  justifyContent: 'center' 
+                }]}
+                onPress={() => comfort.updateLetterSpacing(Math.max(0, Math.round((comfort.letterSpacing - 0.02) * 100) / 100))}
+              >
+                <Text style={[s.sliderBtnText, { fontSize: sliderBtnTextSize, fontWeight: '700', color: Colors.purple }]}>−</Text>
+              </TouchableOpacity>
+              <Text style={[s.sliderValue, { fontSize: sliderValueSize, fontWeight: '700', color: Colors.textPrimary, minWidth: 48, textAlign: 'center' }]}>
+                {Math.round(comfort.letterSpacing * 100)}%
+              </Text>
+              <TouchableOpacity
+                style={[s.sliderBtn, { 
+                  width: sliderBtnSize, 
+                  height: sliderBtnSize, 
+                  borderRadius: sliderBtnSize / 2,
+                  backgroundColor: Colors.lavender, 
+                  alignItems: 'center', 
+                  justifyContent: 'center' 
+                }]}
+                onPress={() => comfort.updateLetterSpacing(Math.min(0.2, Math.round((comfort.letterSpacing + 0.02) * 100) / 100))}
+              >
+                <Text style={[s.sliderBtnText, { fontSize: sliderBtnTextSize, fontWeight: '700', color: Colors.purple }]}>+</Text>
+              </TouchableOpacity>
+            </View>
           </Row>
 
           <Row label="Line Height">
-            <Slider
-              value={comfort.lineHeight}
-              min={1.2} max={2.2} step={0.1}
-              onChange={comfort.updateLineHeight}
-              format={(v) => v.toFixed(1)}
-            />
+            <View style={[s.sliderRow, { flexDirection: 'row', alignItems: 'center', gap: spacing.md }]}>
+              <TouchableOpacity
+                style={[s.sliderBtn, { 
+                  width: sliderBtnSize, 
+                  height: sliderBtnSize, 
+                  borderRadius: sliderBtnSize / 2,
+                  backgroundColor: Colors.lavender, 
+                  alignItems: 'center', 
+                  justifyContent: 'center' 
+                }]}
+                onPress={() => comfort.updateLineHeight(Math.max(1.2, Math.round((comfort.lineHeight - 0.1) * 100) / 100))}
+              >
+                <Text style={[s.sliderBtnText, { fontSize: sliderBtnTextSize, fontWeight: '700', color: Colors.purple }]}>−</Text>
+              </TouchableOpacity>
+              <Text style={[s.sliderValue, { fontSize: sliderValueSize, fontWeight: '700', color: Colors.textPrimary, minWidth: 48, textAlign: 'center' }]}>
+                {comfort.lineHeight.toFixed(1)}
+              </Text>
+              <TouchableOpacity
+                style={[s.sliderBtn, { 
+                  width: sliderBtnSize, 
+                  height: sliderBtnSize, 
+                  borderRadius: sliderBtnSize / 2,
+                  backgroundColor: Colors.lavender, 
+                  alignItems: 'center', 
+                  justifyContent: 'center' 
+                }]}
+                onPress={() => comfort.updateLineHeight(Math.min(2.2, Math.round((comfort.lineHeight + 0.1) * 100) / 100))}
+              >
+                <Text style={[s.sliderBtnText, { fontSize: sliderBtnTextSize, fontWeight: '700', color: Colors.purple }]}>+</Text>
+              </TouchableOpacity>
+            </View>
           </Row>
 
           {/* Live preview */}
-          <View style={[s.preview, { backgroundColor: comfort.backgroundColor }]}>
+          <View style={[s.preview, { backgroundColor: comfort.backgroundColor, borderRadius: BorderRadius.lg, padding: spacing.lg, marginTop: spacing.sm }]}>
             <Text style={[s.previewText, {
               fontSize: comfort.fontSize,
               letterSpacing: comfort.fontSize * comfort.letterSpacing,
               lineHeight: comfort.fontSize * comfort.lineHeight,
               fontFamily: comfort.fontFamily,
+              color: Colors.textPrimary,
             }]}>
               The sun was bright and warm. Birds sang in the big oak tree.
             </Text>
@@ -149,59 +275,84 @@ export function SettingsScreen() {
         </Card>
 
         {/* Background */}
-        <Text style={s.sectionTitle}>🎨 Background Colour</Text>
-        <Card variant="elevated" style={s.section}>
-          <View style={s.bgRow}>
+        <Text style={[s.sectionTitle, { fontSize: sectionTitleSize, marginBottom: spacing.sm, marginTop: spacing.sm }]}>
+          🎨 Background Colour
+        </Text>
+        <Card variant="elevated" style={{ marginBottom: spacing.md, gap: spacing.md }}>
+          <View style={[s.bgRow, { flexDirection: 'row', justifyContent: 'space-between' }]}>
             {BG_PRESETS.map((p) => (
               <TouchableOpacity
                 key={p.color}
-                style={[s.bgSwatch, { backgroundColor: p.color }, comfort.backgroundColor === p.color && s.bgSwatchSelected]}
+                style={[s.bgSwatch, { 
+                  width: bgSwatchSize,
+                  height: bgSwatchSize,
+                  borderRadius: bgSwatchSize / 2,
+                  backgroundColor: p.color,
+                  borderWidth: comfort.backgroundColor === p.color ? 3 : 2,
+                  borderColor: comfort.backgroundColor === p.color ? Colors.purple : Colors.border,
+                  alignItems: 'center', 
+                  justifyContent: 'center' 
+                }]}
                 onPress={() => comfort.updateBackgroundColor(p.color)}
                 accessibilityRole="radio"
                 accessibilityLabel={`${p.label} background`}
                 accessibilityState={{ checked: comfort.backgroundColor === p.color }}
               >
-                {comfort.backgroundColor === p.color && <Text style={s.checkMark}>✓</Text>}
+                {comfort.backgroundColor === p.color && <Text style={{ fontSize: checkMarkSize, color: Colors.purple, fontWeight: '800' }}>✓</Text>}
               </TouchableOpacity>
             ))}
           </View>
-          <View style={s.bgLabels}>
+          <View style={[s.bgLabels, { flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing.xs }]}>
             {BG_PRESETS.map((p) => (
-              <Text key={p.color} style={s.bgLabel}>{p.label}</Text>
+              <Text key={p.color} style={[s.bgLabel, { fontSize: bgLabelSize, color: Colors.textMuted, textAlign: 'center', width: bgSwatchSize }]}>{p.label}</Text>
             ))}
           </View>
         </Card>
 
         {/* Font family */}
-        <Text style={s.sectionTitle}>🔤 Font Family</Text>
-        <Card variant="elevated" style={s.section}>
-          <View style={s.currentFontDisplay}>
-            <Text style={s.currentFontLabel}>Current: </Text>
-            <Text style={[s.currentFontValue, { fontFamily: comfort.fontFamily }]}>
+        <Text style={[s.sectionTitle, { fontSize: sectionTitleSize, marginBottom: spacing.sm, marginTop: spacing.sm }]}>
+          🔤 Font Family
+        </Text>
+        <Card variant="elevated" style={{ marginBottom: spacing.md, gap: spacing.md }}>
+          <View style={[s.currentFontDisplay, { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md, padding: spacing.md, backgroundColor: Colors.lavender, borderRadius: BorderRadius.lg }]}>
+            <Text style={[s.currentFontLabel, { fontSize: currentFontLabelSize, fontWeight: '600', color: Colors.textSecondary }]}>Current: </Text>
+            <Text style={[s.currentFontValue, { fontSize: currentFontValueSize, fontWeight: '700', color: Colors.purple, fontFamily: comfort.fontFamily }]}>
               {FONT_PRESETS.find(f => f.family === comfort.fontFamily)?.name || comfort.fontFamily}
             </Text>
           </View>
-          <View style={s.fontRow}>
+          <View style={[s.fontRow, { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }]}>
             {FONT_PRESETS.map((font) => (
               <TouchableOpacity
                 key={font.name}
-                style={[s.fontChip, comfort.fontFamily === font.family && s.fontChipSelected]}
+                style={[s.fontChip, {
+                  paddingHorizontal: spacing.md,
+                  paddingVertical: spacing.sm,
+                  borderRadius: BorderRadius.lg,
+                  backgroundColor: comfort.fontFamily === font.family ? Colors.lavender : Colors.softBlue,
+                  borderWidth: 2,
+                  borderColor: comfort.fontFamily === font.family ? Colors.purple : Colors.border,
+                }]}
                 onPress={() => comfort.updateFontFamily(font.family)}
               >
-                <Text style={[s.fontChipText, comfort.fontFamily === font.family && s.fontChipTextSelected, { fontFamily: font.family }]}>{font.name}</Text>
+                <Text style={[s.fontChipText, {
+                  fontSize: fontChipTextSize,
+                  fontWeight: '600',
+                  color: comfort.fontFamily === font.family ? Colors.purple : Colors.textSecondary,
+                  fontFamily: font.family
+                }]}>{font.name}</Text>
               </TouchableOpacity>
             ))}
           </View>
         </Card>
 
         {/* Save / Reset */}
-        <View style={s.actionRow}>
+        <View style={[s.actionRow, { gap: spacing.sm, marginBottom: spacing.md }]}>
           <Button label="Save Settings" onPress={handleSync} isLoading={isSyncing} size="lg" fullWidth />
           <Button label="Reset to Defaults" onPress={comfort.resetToDefaults} variant="ghost" size="md" fullWidth />
         </View>
 
         {/* Sign out */}
-        <Card variant="outline" style={s.section}>
+        <Card variant="outline" style={{ marginBottom: spacing.md }}>
           <Button label="Sign Out" onPress={handleLogout} variant="danger" fullWidth size="md" />
         </Card>
       </ScrollView>
@@ -210,41 +361,159 @@ export function SettingsScreen() {
 }
 
 const s = StyleSheet.create({
-  content: { paddingHorizontal: Spacing.screen, paddingBottom: Spacing.xxxl },
-  header: { paddingTop: Spacing.xl, paddingBottom: Spacing.xl, gap: Spacing.xs },
-  title: { fontSize: FontSize.xxxl, fontWeight: '800', color: Colors.textPrimary, letterSpacing: -0.5 },
-  subtitle: { fontSize: FontSize.md, color: Colors.textSecondary },
-  sectionTitle: { fontSize: FontSize.lg, fontWeight: '700', color: Colors.textPrimary, marginBottom: Spacing.sm, marginTop: Spacing.sm },
-  section: { marginBottom: Spacing.md, gap: Spacing.md },
-  userRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
-  avatar: { width: 56, height: 56, borderRadius: 28, backgroundColor: Colors.lavender, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { fontSize: 28 },
-  userName: { fontSize: FontSize.lg, fontWeight: '800', color: Colors.textPrimary },
-  userEmail: { fontSize: FontSize.sm, color: Colors.textSecondary },
-  roleBadge: { marginTop: 4, alignSelf: 'flex-start', backgroundColor: Colors.lavender, paddingHorizontal: Spacing.sm, paddingVertical: 2, borderRadius: BorderRadius.full },
-  roleText: { fontSize: FontSize.xs, fontWeight: '700', color: Colors.purple },
-  settingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: Spacing.xs },
-  settingLabel: { fontSize: FontSize.md, fontWeight: '600', color: Colors.textPrimary, flex: 1 },
-  settingControl: { alignItems: 'flex-end' },
-  sliderRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
-  sliderBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: Colors.lavender, alignItems: 'center', justifyContent: 'center' },
-  sliderBtnText: { fontSize: FontSize.xl, fontWeight: '700', color: Colors.purple },
-  sliderValue: { fontSize: FontSize.md, fontWeight: '700', color: Colors.textPrimary, minWidth: 48, textAlign: 'center' },
-  preview: { borderRadius: BorderRadius.lg, padding: Spacing.lg, marginTop: Spacing.sm },
-  previewText: { color: Colors.textPrimary },
-  bgRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  bgSwatch: { width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderColor: Colors.border, alignItems: 'center', justifyContent: 'center' },
-  bgSwatchSelected: { borderColor: Colors.purple, borderWidth: 3 },
-  checkMark: { fontSize: 18, color: Colors.purple, fontWeight: '800' },
-  bgLabels: { flexDirection: 'row', justifyContent: 'space-between', marginTop: Spacing.xs },
-  bgLabel: { fontSize: 10, color: Colors.textMuted, textAlign: 'center', width: 44 },
-  fontRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
-  fontChip: { paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm, borderRadius: BorderRadius.lg, backgroundColor: Colors.softBlue, borderWidth: 2, borderColor: Colors.border },
-  fontChipSelected: { borderColor: Colors.purple, backgroundColor: Colors.lavender },
-  fontChipText: { fontSize: FontSize.sm, fontWeight: '600', color: Colors.textSecondary },
-  fontChipTextSelected: { color: Colors.purple },
-  currentFontDisplay: { flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.md, padding: Spacing.md, backgroundColor: Colors.lavender, borderRadius: BorderRadius.lg },
-  currentFontLabel: { fontSize: FontSize.md, fontWeight: '600', color: Colors.textSecondary },
-  currentFontValue: { fontSize: FontSize.lg, fontWeight: '700', color: Colors.purple },
-  actionRow: { gap: Spacing.sm, marginBottom: Spacing.md },
+  content: { 
+    // paddingHorizontal, paddingBottom handled dynamically
+  },
+  header: { 
+    // paddingTop, paddingBottom, gap handled dynamically
+  },
+  title: { 
+    fontWeight: '800', 
+    color: Colors.textPrimary, 
+    letterSpacing: -0.5,
+    // fontSize handled dynamically
+  },
+  subtitle: { 
+    color: Colors.textSecondary,
+    // fontSize handled dynamically
+  },
+  sectionTitle: { 
+    fontWeight: '700', 
+    color: Colors.textPrimary,
+    // fontSize, marginBottom, marginTop handled dynamically
+  },
+  section: { 
+    // marginBottom, gap handled dynamically
+  },
+  userRow: { 
+    flexDirection: 'row', 
+    alignItems: 'center',
+    // gap handled dynamically
+  },
+  avatar: { 
+    backgroundColor: Colors.lavender, 
+    alignItems: 'center', 
+    justifyContent: 'center',
+    // width, height, borderRadius handled dynamically
+  },
+  userName: { 
+    fontWeight: '800', 
+    color: Colors.textPrimary,
+    // fontSize handled dynamically
+  },
+  userEmail: { 
+    color: Colors.textSecondary,
+    // fontSize handled dynamically
+  },
+  roleBadge: { 
+    backgroundColor: Colors.lavender,
+    // marginTop, alignSelf, paddingHorizontal, paddingVertical, borderRadius handled dynamically
+  },
+  roleText: { 
+    fontWeight: '700', 
+    color: Colors.purple,
+    // fontSize handled dynamically
+  },
+  settingRow: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'space-between',
+    // paddingVertical handled dynamically
+  },
+  settingLabel: { 
+    fontWeight: '600', 
+    color: Colors.textPrimary, 
+    flex: 1,
+    // fontSize handled dynamically
+  },
+  settingControl: { 
+    alignItems: 'flex-end' 
+  },
+  sliderRow: { 
+    flexDirection: 'row', 
+    alignItems: 'center',
+    // gap handled dynamically
+  },
+  sliderBtn: { 
+    backgroundColor: Colors.lavender, 
+    alignItems: 'center', 
+    justifyContent: 'center',
+    // width, height, borderRadius handled dynamically
+  },
+  sliderBtnText: { 
+    fontWeight: '700', 
+    color: Colors.purple,
+    // fontSize handled dynamically
+  },
+  sliderValue: { 
+    fontWeight: '700', 
+    color: Colors.textPrimary, 
+    minWidth: 48, 
+    textAlign: 'center',
+    // fontSize handled dynamically
+  },
+  preview: { 
+    borderRadius: BorderRadius.lg,
+    // padding, marginTop, backgroundColor handled dynamically
+  },
+  previewText: { 
+    color: Colors.textPrimary 
+  },
+  bgRow: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between' 
+  },
+  bgSwatch: { 
+    alignItems: 'center', 
+    justifyContent: 'center',
+    // width, height, borderRadius, borderWidth, borderColor, backgroundColor handled dynamically
+  },
+  checkMark: { 
+    color: Colors.purple, 
+    fontWeight: '800',
+    // fontSize handled dynamically
+  },
+  bgLabels: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between',
+    // marginTop handled dynamically
+  },
+  bgLabel: { 
+    color: Colors.textMuted, 
+    textAlign: 'center',
+    // fontSize, width handled dynamically
+  },
+  fontRow: { 
+    flexDirection: 'row', 
+    flexWrap: 'wrap',
+    // gap handled dynamically
+  },
+  fontChip: { 
+    borderRadius: BorderRadius.lg,
+    // paddingHorizontal, paddingVertical, backgroundColor, borderWidth, borderColor handled dynamically
+  },
+  fontChipText: { 
+    fontWeight: '600',
+    // fontSize, color handled dynamically
+  },
+  currentFontDisplay: { 
+    flexDirection: 'row', 
+    alignItems: 'center',
+    backgroundColor: Colors.lavender,
+    borderRadius: BorderRadius.lg,
+    // marginBottom, padding handled dynamically
+  },
+  currentFontLabel: { 
+    fontWeight: '600', 
+    color: Colors.textSecondary,
+    // fontSize handled dynamically
+  },
+  currentFontValue: { 
+    fontWeight: '700', 
+    color: Colors.purple,
+    // fontSize handled dynamically
+  },
+  actionRow: { 
+    // gap, marginBottom handled dynamically
+  },
 });
